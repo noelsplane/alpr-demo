@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALPR Query History</title>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #000000 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 2rem;
+        color: #333;
+    }
+    
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+    }
+    
+    h1 {
+        text-align: center;
+        color: #2c3e50;
+        margin-bottom: 2rem;
+        font-size: 2.5rem;
+        font-weight: 300;
+        letter-spacing: -1px;
+    }
+      .back-link {
+        display: inline-block;
+        margin-bottom: 2rem;
+        margin-right: 1rem;
+        padding: 12px 24px;
+        background: #667eea;
+        color: white;
+        text-decoration: none;
+        border-radius: 25px;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .back-link:hover {
+        background: #5a67d8;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .clear-button {
+        display: inline-block;
+        margin-bottom: 2rem;
+        padding: 12px 24px;
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        font-size: 1rem;
+    }
+    
+    .clear-button:hover {
+        background: #c82333;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+    }
+    
+    .clear-button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .record {
+        background: linear-gradient(145deg, #ffffff, #f0f0f0);
+        padding: 1.5rem;
+        border-radius: 15px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: transform 0.3s ease;
+    }
+    
+    .record:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+    }
+    
+    .record h3 {
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        font-size: 1.3rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .record h3::before {
+        content: "🚗";
+        font-size: 1.2rem;
+    }
+    
+    .detection-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .info-item {
+        background: rgba(102, 126, 234, 0.1);
+        padding: 0.8rem;
+        border-radius: 10px;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.3rem;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .info-value {
+        font-size: 1.1rem;
+        color: #2c3e50;
+        font-weight: 500;
+    }
+    
+    .plate-section {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: rgba(40, 167, 69, 0.1);
+        border-radius: 10px;
+        border-left: 4px solid #28a745;
+    }
+    
+    .plate-text {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .confidence {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .confidence-high { color: #28a745; }
+    .confidence-medium { color: #ffc107; }
+    .confidence-low { color: #dc3545; }
+    
+    .state-info {
+        background: rgba(102, 126, 234, 0.1);
+        padding: 0.5rem;
+        border-radius: 5px;
+        margin: 0.5rem 0;
+    }
+    
+    .state-badge {
+        display: inline-block;
+        background: #667eea;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-left: 0.5rem;
+    }
+    
+    img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        margin-top: 1rem;
+        transition: transform 0.3s ease;
+        max-height: 200px;
+        object-fit: contain;
+    }
+    
+    img:hover {
+        transform: scale(1.05);
+    }
+    
+    .no-detections {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+        font-size: 1.1rem;
+        background: #f8f9fa;
+        border-radius: 15px;
+        border-left: 4px solid #ffc107;
+    }
+    
+    .error-message {
+        text-align: center;
+        padding: 2rem;
+        color: #dc3545;
+        font-size: 1.1rem;
+        background: #f8f9fa;
+        border-radius: 15px;
+        border-left: 4px solid #dc3545;
+    }
+    
+    @media (max-width: 768px) {
+        body {
+            padding: 1rem;
+        }
+        
+        .container {
+            padding: 1.5rem;
+        }
+        
+        h1 {
+            font-size: 2rem;
+        }
+        
+        .detection-info {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+</head>
+<body>    <div class="container">
+        <h1>🚗 Past Plate Detections</h1>
+        <div class="action-buttons">
+            <a href="index.html?reload=1" class="back-link">← Back to Upload</a>
+            <button id="clearHistoryBtn" class="clear-button">🗑️ Clear History</button>
+        </div>
+        <div id="logContainer">...</div>
+    </div>   <script>
+    // Function to load detections
+    function loadDetections() {
+      fetch('/api/v1/detections')
+        .then(res => res.json())
+        .then(responseData => {
+          console.log("Detections received:", responseData);
+          const data = Array.isArray(responseData) ? responseData : responseData.data || [];
+          const container = document.getElementById('logContainer');
+
+          if (data.length === 0) {
+            container.innerHTML = '<div class="no-detections">No detections logged yet.</div>';
+            return;
+          }
+
+          container.innerHTML = ''; // Clear existing content
+
+          data.reverse().forEach((entry, index) => {
+            const box = document.createElement('div');
+            box.className = 'record';
+
+            // Helper function to get confidence class
+            const getConfidenceClass = (confidence) => {
+              if (confidence >= 0.8) return 'confidence-high';
+              if (confidence >= 0.5) return 'confidence-medium';
+              return 'confidence-low';
+            };
+
+            const platesHtml = entry.plates_detected.map((plate, i) => {
+              const stateInfo = plate.state 
+                ? `<div class="state-info">
+                    <span class="info-label">State:</span>
+                    <span class="state-badge">${plate.state}</span>
+                    <span class="${getConfidenceClass(plate.state_confidence)}" style="margin-left: 0.5rem;">
+                      (${(plate.state_confidence * 100).toFixed(0)}% confidence)
+                    </span>
+                   </div>`
+                : '';
+              
+              return `
+              <div class="plate-section">
+                <div class="plate-text">Plate ${i + 1}: ${plate.text}</div>
+                <div class="confidence ${getConfidenceClass(plate.confidence)}">
+                  OCR Confidence: ${(plate.confidence * 100).toFixed(1)}%
+                </div>
+                ${stateInfo}
+                <img src="data:image/jpeg;base64,${plate.plate_image_base64}" alt="Plate image" />
+              </div>
+            `}).join('');
+
+            box.innerHTML = `
+              <h3>Detection ${index + 1}</h3>
+              <div class="detection-info">
+                <div class="info-item">
+                  <div class="info-label">File</div>
+                  <div class="info-value">${entry.image}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Time</div>
+                  <div class="info-value">${new Date(entry.timestamp).toLocaleString()}</div>
+                </div>
+              </div>
+              ${platesHtml}
+            `;
+
+            container.appendChild(box);
+          });
+        })
+        .catch(err => {
+          document.getElementById('logContainer').innerHTML = '<div class="error-message">Error loading detections.</div>';
+          console.error(err);
+        });
+    }
+
+    // Function to clear history
+    function clearHistory() {
+      if (!confirm('Are you sure you want to clear all detection history? This action cannot be undone.')) {
+        return;
+      }
+
+      const clearBtn = document.getElementById('clearHistoryBtn');
+      const originalText = clearBtn.textContent;
+      
+      clearBtn.disabled = true;
+      clearBtn.textContent = 'Clearing...';
+
+      fetch('/api/v1/detections', {
+        method: 'DELETE'
+      })
+      .then(res => res.json())
+      .then(response => {
+        if (response.error) {
+          throw new Error(response.error);
+        }
+        console.log('History cleared:', response);
+        loadDetections(); // Reload the empty list
+        alert('History cleared successfully!');
+      })
+      .catch(err => {
+        console.error('Error clearing history:', err);
+        alert('Error clearing history: ' + err.message);
+      })
+      .finally(() => {
+        clearBtn.disabled = false;
+        clearBtn.textContent = originalText;
+      });
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+      loadDetections();
+      document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
+    });
+</script>
+</body>
+</html>
