@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -274,7 +273,8 @@
         .plate-info, .plate-info-three {
             grid-template-columns: 1fr;
         }
-          button {
+        
+        button {
             margin-left: 0;
             margin-top: 1rem;
             width: 100%;
@@ -307,7 +307,8 @@
                     <span id="fileName" style="margin-left: 1rem; color: #6c757d;"></span>
                 </div>
                 <button type="submit">Analyze Plate</button>
-            </form>        </div>
+            </form>
+        </div>
         
         <div class="navigation-section">
             <a href="history.html" class="nav-button">View Past Detections</a>
@@ -322,6 +323,23 @@
         const results = document.getElementById('results');
         const fileInput = document.getElementById('fileInput');
         const fileName = document.getElementById('fileName');
+
+        // State names mapping
+        const stateNames = {
+            'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas',
+            'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware',
+            'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho',
+            'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas',
+            'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+            'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi',
+            'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada',
+            'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York',
+            'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma',
+            'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+            'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah',
+            'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia',
+            'WI': 'Wisconsin', 'WY': 'Wyoming', 'DC': 'Washington D.C.'
+        };
 
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
@@ -344,27 +362,37 @@
                 });
 
                 const data = await res.json();
+                console.log('Response from backend:', data);
+                
                 results.innerHTML = '';
 
-                if (data.plates_detected.length === 0) {
-                    results.innerHTML = '<div class="no-plates"> No license plates detected in this image.</div>';
+                if (!data.plates_detected || data.plates_detected.length === 0) {
+                    results.innerHTML = '<div class="no-plates">🚫 No license plates detected in this image.</div>';
                     return;
                 }
 
                 data.plates_detected.forEach((plate, i) => {
+                    console.log(`Plate ${i+1}:`, plate);
+                    console.log('State:', plate.state);
+                    console.log('State confidence:', plate.state_confidence);
+                    
                     const confidenceClass = 
                         plate.confidence >= 0.8 ? 'confidence-high' : 
                         plate.confidence >= 0.6 ? 'confidence-medium' : 'confidence-low';
+                    
+                    const stateConfClass = 
+                        plate.state_confidence >= 0.8 ? 'confidence-high' : 
+                        plate.state_confidence >= 0.5 ? 'confidence-medium' : 'confidence-low';
                     
                     const box = document.createElement('div');
                     box.className = 'box';
                     
                     let plateInfoHTML = '';
-                    let stateHTML = '';
                     
-                    if (plate.state) {
-                        const stateClass = plate.state.code === 'UNKNOWN' ? 'state-unknown' : 'state-item';
-                        const stateIcon = plate.state.code === 'UNKNOWN' ? '' : '';
+                    // Check if state exists and is not null/undefined/empty
+                    if (plate.state && plate.state !== 'null' && plate.state !== 'undefined') {
+                        const stateName = stateNames[plate.state] || plate.state;
+                        const stateClass = 'state-item';
                         
                         plateInfoHTML = `
                             <div class="plate-info-three">
@@ -378,11 +406,18 @@
                                 </div>
                                 <div class="info-item ${stateClass}">
                                     <div class="info-label">State</div>
-                                    <div class="info-value">${stateIcon} ${plate.state.name}</div>
+                                    <div class="info-value">${plate.state} - ${stateName}</div>
                                 </div>
                             </div>
+                            ${plate.state_confidence ? `
+                                <div class="info-item" style="margin-bottom: 1rem;">
+                                    <div class="info-label">State Detection Confidence</div>
+                                    <div class="info-value ${stateConfClass}">${(plate.state_confidence * 100).toFixed(1)}%</div>
+                                </div>
+                            ` : ''}
                         `;
                     } else {
+                        // No state detected
                         plateInfoHTML = `
                             <div class="plate-info">
                                 <div class="info-item">
@@ -396,7 +431,7 @@
                             </div>
                             <div class="info-item state-unknown" style="margin-bottom: 1rem;">
                                 <div class="info-label">State</div>
-                                <div class="info-value"> Could not identify state</div>
+                                <div class="info-value">❓ Could not identify state</div>
                             </div>
                         `;
                     }
@@ -409,7 +444,7 @@
                     results.appendChild(box);
                 });
             } catch (error) {
-                results.innerHTML = '<div class="no-plates"> Error processing image. Please try again.</div>';
+                results.innerHTML = '<div class="no-plates">Error processing image. Please try again.</div>';
                 console.error('Error:', error);
             }
         });
