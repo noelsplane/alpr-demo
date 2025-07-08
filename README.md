@@ -1,36 +1,42 @@
 # ALPR Demo - Automatic License Plate Recognition
 
-A FastAPI-based Automatic License Plate Recognition (ALPR) system that uses YOLOv8 for vehicle detection and EasyOCR for license plate text recognition.
+A comprehensive automatic license plate recognition (ALPR) system built with FastAPI, YOLOv8, and EasyOCR, featuring advanced state recognition and enhanced OCR preprocessing.
 
 ## Features
 
-- **License Plate Detection**: Uses YOLOv8 model to detect license plates in images
-- **Text Recognition**: EasyOCR extracts text from detected license plates
-- **SQLite Database**: Stores detection history with confidence scores and bounding boxes
-- **REST API**: FastAPI endpoints for uploading images and retrieving detection history
-- **Web Interface**: Static HTML files for easy interaction
-- **Base64 Image Storage**: Cropped license plate images stored as base64 in database
+- **License Plate Detection**: Uses specialized YOLOv8 model for accurate license plate detection
+- **Advanced OCR**: EasyOCR with multiple preprocessing techniques for enhanced accuracy
+- **State Recognition**: Intelligent state identification from plate patterns and visual context
+- **Web Interface**: Clean, responsive web UI for uploading images and viewing results
+- **History Tracking**: SQLite database to store detection history with image thumbnails
+- **Real-time Processing**: Fast processing with detailed confidence scoring
+- **Enhanced Preprocessing**: Multiple image enhancement techniques for better OCR accuracy
+- **Context-Aware Detection**: Multi-strategy approach for state and plate text recognition
 
 ## Project Structure
 
 ```
 alpr-demo/
 ├── api/
-│   ├── main.py              # FastAPI application
-│   ├── models.py            # SQLAlchemy database models
-│   ├── schemas.py           # Pydantic schemas
-│   ├── requirements.txt     # Python dependencies
-│   └── static/             # Web interface files
-│       ├── index.html
-│       ├── live.html
-│       └── history.html
+│   ├── main.py                 # Main FastAPI application
+│   ├── models.py               # Database models
+│   ├── requirements.txt        # Python dependencies
+│   ├── state_model.py          # State recognition logic
+│   ├── plate_filter_utils.py   # OCR filtering utilities
+│   ├── models/                 # ML model files
+│   │   └── license_plate_yolov8.pt
+│   ├── static/                 # Web interface files
+│   │   ├── index.html
+│   │   ├── live.html
+│   │   └── history.html
+│   └── utils/                  # Utility modules
+│       └── state_recognition.py
 ├── data/
-│   ├── test/               # Test images
-│   └── uploads/            # Uploaded images
-├── models/
-│   └── yolov8n.pt          # YOLOv8 model weights
-└── notebooks/
-    └── day1_plate_detect.ipynb
+│   ├── test/                   # Test images
+│   └── uploads/                # Uploaded images
+├── notebooks/
+│   └── day1_plate_detect.ipynb # Development notebook
+└── README.md
 ```
 
 ## Installation
