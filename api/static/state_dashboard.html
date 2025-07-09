@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>State Recognition Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #000000 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 2rem;
+        color: #333;
+    }
+    
+    .dashboard {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+    
+    h1 {
+        text-align: center;
+        color: #2c3e50;
+        margin-bottom: 2rem;
+        font-size: 2.5rem;
+        font-weight: 300;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: linear-gradient(145deg, #ffffff, #f0f0f0);
+        padding: 1.5rem;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #667eea;
+        margin: 0.5rem 0;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .chart-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    }
+    
+    .chart-title {
+        font-size: 1.5rem;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 2rem;
+    }
+    
+    .details-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 2rem;
+    }
+    
+    .details-table th {
+        background: #667eea;
+        color: white;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+    }
+    
+    .details-table td {
+        padding: 0.8rem 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .details-table tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .confidence-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .confidence-high { background: #d4edda; color: #155724; }
+    .confidence-medium { background: #fff3cd; color: #856404; }
+    .confidence-low { background: #f8d7da; color: #721c24; }
+    
+    .method-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        background: #e3e6f0;
+        color: #4e5d6c;
+    }
+    
+    .controls {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .control-group {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+    
+    button, select {
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        border: 2px solid #667eea;
+        background: white;
+        color: #667eea;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    button:hover, select:hover {
+        background: #667eea;
+        color: white;
+    }
+    
+    .back-link {
+        display: inline-block;
+        padding: 12px 24px;
+        background: #667eea;
+        color: white;
+        text-decoration: none;
+        border-radius: 25px;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .back-link:hover {
+        background: #5a67d8;
+        transform: translateY(-2px);
+    }
+</style>
+</head>
+<body>
+    <div class="dashboard">
+        <h1>📊 State Recognition Analytics</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <a href="index.html" class="back-link">← Back to Upload</a>
+                <button onclick="refreshData()">🔄 Refresh Data</button>
+            </div>
+            <div class="control-group">
+                <select id="timeRange" onchange="updateCharts()">
+                    <option value="all">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="week">Last 7 Days</option>
+                    <option value="month">Last 30 Days</option>
+                </select>
+                <select id="stateFilter" onchange="updateCharts()">
+                    <option value="all">All States</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Detections</div>
+                <div class="stat-value" id="totalDetections">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">States Identified</div>
+                <div class="stat-value" id="statesIdentified">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Average Confidence</div>
+                <div class="stat-value" id="avgConfidence">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Unique States</div>
+                <div class="stat-value" id="uniqueStates">0</div>
+            </div>
+        </div>
+        
+        <div class="chart-section">
+            <h2 class="chart-title">State Distribution</h2>
+            <div class="chart-container">
+                <canvas id="stateChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-section">
+            <h2 class="chart-title">Recognition Methods</h2>
+            <div class="chart-container" style="height: 300px;">
+                <canvas id="methodChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-section">
+            <h2 class="chart-title">Confidence Distribution</h2>
+            <div class="chart-container" style="height: 300px;">
+                <canvas id="confidenceChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-section">
+            <h2 class="chart-title">Recent Detections</h2>
+            <table class="details-table" id="detailsTable">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Plate</th>
+                        <th>State</th>
+                        <th>Confidence</th>
+                        <th>Method</th>
+                        <th>Image</th>
+                    </tr>
+                </thead>
+                <tbody id="detailsBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let allData = [];
+        let charts = {};
+        
+        // Initialize dashboard
+        async function initDashboard() {
+            await refreshData();
+            populateStateFilter();
+            setupCharts();
+            updateCharts();
+        }
+        
+        // Fetch data from API
+        async function refreshData() {
+            try {
+                const response = await fetch('/api/v1/detections');
+                const data = await response.json();
+                allData = data;
+                updateStats();
+                updateCharts();
+                updateDetailsTable();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+        
+        // Update statistics cards
+        function updateStats() {
+            const filteredData = getFilteredData();
+            let totalDetections = 0;
+            let statesIdentified = 0;
+            let totalConfidence = 0;
+            let uniqueStates = new Set();
+            
+            filteredData.forEach(entry => {
+                entry.plates_detected.forEach(plate => {
+                    totalDetections++;
+                    if (plate.state && plate.state !== 'UNKNOWN') {
+                        statesIdentified++;
+                        uniqueStates.add(plate.state);
+                        totalConfidence += plate.state_confidence || 0;
+                    }
+                });
+            });
+            
+            document.getElementById('totalDetections').textContent = totalDetections;
+            document.getElementById('statesIdentified').textContent = 
+                totalDetections > 0 ? Math.round((statesIdentified / totalDetections) * 100) + '%' : '0%';
+            document.getElementById('avgConfidence').textContent = 
+                statesIdentified > 0 ? Math.round((totalConfidence / statesIdentified) * 100) + '%' : '0%';
+            document.getElementById('uniqueStates').textContent = uniqueStates.size;
+        }
+        
+        // Get filtered data based on controls
+        function getFilteredData() {
+            const timeRange = document.getElementById('timeRange').value;
+            const stateFilter = document.getElementById('stateFilter').value;
+            
+            let filtered = allData;
+            
+            // Time filter
+            if (timeRange !== 'all') {
+                const now = new Date();
+                const ranges = {
+                    'today': 1,
+                    'week': 7,
+                    'month': 30
+                };
+                const daysAgo = ranges[timeRange];
+                const cutoff = new Date(now - daysAgo * 24 * 60 * 60 * 1000);
+                
+                filtered = filtered.filter(entry => 
+                    new Date(entry.timestamp) >= cutoff
+                );
+            }
+            
+            // State filter
+            if (stateFilter !== 'all') {
+                filtered = filtered.map(entry => ({
+                    ...entry,
+                    plates_detected: entry.plates_detected.filter(plate => 
+                        plate.state === stateFilter
+                    )
+                })).filter(entry => entry.plates_detected.length > 0);
+            }
+            
+            return filtered;
+        }
+        
+        // Setup charts
+        function setupCharts() {
+            // State distribution chart
+            charts.state = new Chart(document.getElementById('stateChart'), {
+                type: 'bar',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: false
+                        },
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Detections'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Method distribution chart
+            charts.method = new Chart(document.getElementById('methodChart'), {
+                type: 'doughnut',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+            
+            // Confidence distribution chart
+            charts.confidence = new Chart(document.getElementById('confidenceChart'), {
+                type: 'line',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Confidence %'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Update all charts
+        function updateCharts() {
+            const filteredData = getFilteredData();
+            
+            // Process data for charts
+            const stateCounts = {};
+            const methodCounts = { pattern: 0, context: 0, visual: 0, color: 0, unknown: 0 };
+            const confidenceData = [];
+            
+            filteredData.forEach(entry => {
+                entry.plates_detected.forEach(plate => {
+                    // State counts
+                    if (plate.state && plate.state !== 'UNKNOWN') {
+                        stateCounts[plate.state] = (stateCounts[plate.state] || 0) + 1;
+                    }
+                    
+                    // Method counts (simplified for now)
+                    const method = plate.state ? 'pattern' : 'unknown';
+                    methodCounts[method]++;
+                    
+                    // Confidence data
+                    if (plate.state_confidence) {
+                        confidenceData.push({
+                            time: entry.timestamp,
+                            confidence: Math.round(plate.state_confidence * 100)
+                        });
+                    }
+                });
+            });
+            
+            // Update state chart
+            const sortedStates = Object.entries(stateCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+            
+            charts.state.data.labels = sortedStates.map(([state]) => state);
+            charts.state.data.datasets = [{
+                data: sortedStates.map(([, count]) => count),
+                backgroundColor: '#667eea',
+                borderColor: '#5a67d8',
+                borderWidth: 2
+            }];
+            charts.state.update();
+            
+            // Update method chart
+            charts.method.data.labels = Object.keys(methodCounts);
+            charts.method.data.datasets = [{
+                data: Object.values(methodCounts),
+                backgroundColor: [
+                    '#667eea',
+                    '#764ba2',
+                    '#f093fb',
+                    '#4facfe',
+                    '#e9ecef'
+                ]
+            }];
+            charts.method.update();
+            
+            // Update confidence chart (last 20 detections)
+            const recentConfidence = confidenceData.slice(-20);
+            charts.confidence.data.labels = recentConfidence.map((_, i) => i + 1);
+            charts.confidence.data.datasets = [{
+                label: 'Confidence %',
+                data: recentConfidence.map(d => d.confidence),
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4
+            }];
+            charts.confidence.update();
+        }
+        
+        // Update details table
+        function updateDetailsTable() {
+            const filteredData = getFilteredData();
+            const tbody = document.getElementById('detailsBody');
+            tbody.innerHTML = '';
+            
+            // Show last 10 detections
+            const recentDetections = [];
+            filteredData.forEach(entry => {
+                entry.plates_detected.forEach(plate => {
+                    recentDetections.push({
+                        time: entry.timestamp,
+                        plate: plate.text,
+                        state: plate.state || 'Unknown',
+                        confidence: plate.state_confidence || 0,
+                        method: 'pattern', // Simplified
+                        image: entry.image
+                    });
+                });
+            });
+            
+            recentDetections.slice(-10).reverse().forEach(detection => {
+                const row = tbody.insertRow();
+                
+                // Time
+                row.insertCell().textContent = new Date(detection.time).toLocaleString();
+                
+                // Plate
+                row.insertCell().textContent = detection.plate;
+                
+                // State
+                row.insertCell().textContent = detection.state;
+                
+                // Confidence
+                const confCell = row.insertCell();
+                const confBadge = document.createElement('span');
+                confBadge.className = 'confidence-badge ' + getConfidenceClass(detection.confidence);
+                confBadge.textContent = Math.round(detection.confidence * 100) + '%';
+                confCell.appendChild(confBadge);
+                
+                // Method
+                const methodCell = row.insertCell();
+                const methodBadge = document.createElement('span');
+                methodBadge.className = 'method-badge';
+                methodBadge.textContent = detection.method;
+                methodCell.appendChild(methodBadge);
+                
+                // Image
+                row.insertCell().textContent = detection.image;
+            });
+        }
+        
+        // Get confidence class for styling
+        function getConfidenceClass(confidence) {
+            if (confidence >= 0.8) return 'confidence-high';
+            if (confidence >= 0.5) return 'confidence-medium';
+            return 'confidence-low';
+        }
+        
+        // Populate state filter
+        function populateStateFilter() {
+            const states = new Set();
+            allData.forEach(entry => {
+                entry.plates_detected.forEach(plate => {
+                    if (plate.state && plate.state !== 'UNKNOWN') {
+                        states.add(plate.state);
+                    }
+                });
+            });
+            
+            const select = document.getElementById('stateFilter');
+            Array.from(states).sort().forEach(state => {
+                const option = document.createElement('option');
+                option.value = state;
+                option.textContent = state;
+                select.appendChild(option);
+            });
+        }
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', initDashboard);
+        
+        // Auto-refresh every 30 seconds
+        setInterval(refreshData, 30000);
+    </script>
+</body>
+</html>

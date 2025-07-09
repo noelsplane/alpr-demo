@@ -1,0 +1,51 @@
+{
+  "timestamp": "2025-07-09T10:58:38.060902",
+  "overall": {
+    "total_detections": 9,
+    "pattern_accuracy": 0.4444444444444444,
+    "states_covered": 6,
+    "avg_confidence": 0.8333333333333333
+  },
+  "state_distribution": {
+    "NJ": 3,
+    "MA": 1,
+    "AK": 2,
+    "CA": 1,
+    "CT": 1,
+    "CO": 1
+  },
+  "confidence_stats": {
+    "mean": 0.8333333333333333,
+    "median": 0.8,
+    "std": 0.09128709291752768,
+    "min": 0.7,
+    "max": 0.95
+  },
+  "pattern_accuracy": {
+    "FL": {
+      "accuracy": 0.0,
+      "total": 3,
+      "correct": 0
+    },
+    "AK": {
+      "accuracy": 0.6666666666666666,
+      "total": 3,
+      "correct": 2
+    },
+    "CA": {
+      "accuracy": 1.0,
+      "total": 1,
+      "correct": 1
+    },
+    "AL": {
+      "accuracy": 0.0,
+      "total": 1,
+      "correct": 0
+    },
+    "CO": {
+      "accuracy": 1.0,
+      "total": 1,
+      "correct": 1
+    }
+  }
+}

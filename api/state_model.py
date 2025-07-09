@@ -11,9 +11,6 @@ from pathlib import Path
 import logging
 from PIL import Image
 
-# Import the pattern matcher as fallback
-from state_patterns import StatePatternMatcher
-
 logger = logging.getLogger(__name__)
 
 # US states mapping
@@ -24,6 +21,36 @@ STATE_CLASSES = [
     'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
     'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
 ]
+
+# Try to import pattern matcher, but don't fail if it's not available
+try:
+    from state_patterns import StatePatternMatcher
+except ImportError:
+    logger.warning("state_patterns module not found, using fallback pattern matching")
+    # Create a simple fallback pattern matcher
+    class StatePatternMatcher:
+        def __init__(self):
+            self.patterns = {
+                'CA': [r'^[0-9][A-Z]{3}[0-9]{3}$', r'^[A-Z]{3}[0-9]{4}$'],
+                'TX': [r'^[A-Z]{3}[0-9]{4}$', r'^[A-Z]{2}[0-9]{5}$'],
+                'NY': [r'^[A-Z]{3}[0-9]{4}$', r'^[A-Z]{3}[\s\-]?[0-9]{4}$'],
+                'FL': [r'^[A-Z]{3}[0-9]{3}$', r'^[A-Z]{4}[0-9]{2}$'],
+                # Add more states as needed
+            }
+        
+        def extract_state_from_text(self, plate_text: str) -> Tuple[Optional[str], float]:
+            import re
+            if not plate_text:
+                return None, 0.0
+            
+            cleaned = plate_text.upper().strip().replace(' ', '').replace('-', '')
+            
+            for state, patterns in self.patterns.items():
+                for pattern in patterns:
+                    if re.match(pattern, cleaned):
+                        return state, 0.8
+            
+            return None, 0.0
 
 
 class StateClassifier:
@@ -172,7 +199,7 @@ class StateClassifier:
         if self.model:
             return STATE_CLASSES
         elif self.pattern_matcher:
-            return self.pattern_matcher.get_supported_states()
+            return list(self.pattern_matcher.patterns.keys())
         return []
 
 

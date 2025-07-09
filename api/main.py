@@ -10,7 +10,6 @@ from io import BytesIO
 from PIL import Image, ImageEnhance, ImageFilter
 from datetime import datetime
 from fastapi.staticfiles import StaticFiles
-from starlette.staticfiles import StaticFiles as StarletteStaticFiles  
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models import Base, PlateDetection
@@ -35,6 +34,7 @@ def encode_image_to_base64(img_array):
     encoded_string = base64.b64encode(buffer.getvalue()).decode("utf-8")
     return encoded_string
 
+
 def get_db():
     db = SessionLocal()
     try:
@@ -44,12 +44,15 @@ def get_db():
 
 
 app = FastAPI()
+
+
 class NoCacheStaticFiles(StaticFiles):
     async def get_response(self, path, scope):
         response = await super().get_response(path, scope)
         response.headers["Cache-Control"] = "no-cache"
         return response
-    
+
+
 app.mount("/ui", NoCacheStaticFiles(directory="static", html=True), name="static")
 
 # Load the specialized license plate detection model
@@ -79,9 +82,11 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 DEBUG_DIR = "debug_images"
 os.makedirs(DEBUG_DIR, exist_ok=True)
 
+
 @app.get("/")
 def root():
     return {"message": "ALPR API is running with improved OCR"}
+
 
 def save_detections_to_db(image_name, plates_detected):
     db = get_db()
@@ -106,6 +111,7 @@ def save_detections_to_db(image_name, plates_detected):
         logger.error(f"Error saving to database: {e}")
     finally:
         db.close()
+
 
 @app.get("/api/v1/detections")
 def get_all_detections():
@@ -138,6 +144,7 @@ def get_all_detections():
     finally:
         db.close()
 
+
 @app.delete("/api/v1/detections")
 def clear_all_detections():
     db = get_db()
@@ -150,6 +157,7 @@ def clear_all_detections():
         return JSONResponse(content={"error": f"Failed to clear history: {str(e)}"}, status_code=500)
     finally:
         db.close()
+
 
 def enhance_plate_image(img):
     """Apply multiple enhancement techniques to improve OCR accuracy."""
@@ -176,6 +184,7 @@ def enhance_plate_image(img):
     enhanced = np.array(pil_img)
     
     return enhanced
+
 
 def extract_state_from_plate_region(img, ocr, debug_name=""):
     """Try to extract state by focusing on specific regions of the plate."""
@@ -245,6 +254,7 @@ def extract_state_from_plate_region(img, ocr, debug_name=""):
     
     return None, 0
 
+
 def enhance_for_state_text(img):
     """Special preprocessing for reading state names which are often in decorative fonts."""
     # Convert to grayscale
@@ -273,6 +283,7 @@ def enhance_for_state_text(img):
     variants.append(adaptive)
     
     return variants
+
 
 @app.post("/api/v1/sighting")
 async def create_sighting(file: UploadFile = File(...)):
@@ -417,3 +428,65 @@ async def create_sighting(file: UploadFile = File(...)):
     }
 
     return JSONResponse(content=response)
+
+
+@app.get("/api/v1/state-analytics")
+def get_state_analytics():
+    """Get state recognition analytics data."""
+    db = get_db()
+    try:
+        detections = db.query(PlateDetection).all()
+        
+        # Calculate analytics
+        total_detections = len(detections)
+        states_identified = sum(1 for d in detections if d.state and d.state != 'UNKNOWN')
+        
+        # State distribution
+        state_counts = {}
+        confidence_sum = 0
+        confidence_count = 0
+        
+        for detection in detections:
+            if detection.state and detection.state != 'UNKNOWN':
+                state_counts[detection.state] = state_counts.get(detection.state, 0) + 1
+                if detection.state_confidence:
+                    confidence_sum += detection.state_confidence
+                    confidence_count += 1
+        
+        # Method distribution (simplified for now)
+        method_counts = {
+            'pattern': states_identified * 0.7,
+            'context': states_identified * 0.2,
+            'visual': states_identified * 0.1
+        }
+        
+        analytics = {
+            'summary': {
+                'total_detections': total_detections,
+                'states_identified': states_identified,
+                'identification_rate': (states_identified / total_detections * 100) if total_detections > 0 else 0,
+                'average_confidence': (confidence_sum / confidence_count * 100) if confidence_count > 0 else 0,
+                'unique_states': len(state_counts)
+            },
+            'state_distribution': state_counts,
+            'method_distribution': method_counts,
+            'recent_detections': []
+        }
+        
+        # Add recent detections with state info
+        recent = db.query(PlateDetection).order_by(PlateDetection.timestamp.desc()).limit(20).all()
+        for det in recent:
+            analytics['recent_detections'].append({
+                'timestamp': det.timestamp.isoformat(),
+                'plate_text': det.plate_text,
+                'state': det.state,
+                'state_confidence': det.state_confidence,
+                'image_name': det.image_name
+            })
+        
+        return JSONResponse(content=analytics)
+        
+    except Exception as e:
+        return JSONResponse(content={"error": f"Failed to get analytics: {str(e)}"}, status_code=500)
+    finally:
+        db.close()

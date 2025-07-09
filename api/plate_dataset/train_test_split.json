@@ -1,0 +1,22 @@
+{
+  "train": {
+    "total": 6,
+    "states": {
+      "AK": 1,
+      "NJ": 2,
+      "UNKNOWN": 3
+    }
+  },
+  "test": {
+    "total": 7,
+    "states": {
+      "AK": 1,
+      "CA": 1,
+      "CO": 1,
+      "CT": 1,
+      "MA": 1,
+      "NJ": 1,
+      "UNKNOWN": 1
+    }
+  }
+}
