@@ -38,9 +38,9 @@ def encode_image_to_base64(img_array):
 def get_db():
     db = SessionLocal()
     try:
-        return db
+        yield db
     finally:
-        pass
+        db.close()
 
 
 app = FastAPI()
@@ -89,7 +89,7 @@ def root():
 
 
 def save_detections_to_db(image_name, plates_detected):
-    db = get_db()
+    db = SessionLocal()
     try:
         for plate in plates_detected:
             detection = PlateDetection(
@@ -115,7 +115,7 @@ def save_detections_to_db(image_name, plates_detected):
 
 @app.get("/api/v1/detections")
 def get_all_detections():
-    db = get_db()
+    db = SessionLocal()
     try:
         detections = db.query(PlateDetection).order_by(PlateDetection.timestamp.desc()).all()
         
@@ -147,7 +147,7 @@ def get_all_detections():
 
 @app.delete("/api/v1/detections")
 def clear_all_detections():
-    db = get_db()
+    db = SessionLocal()
     try:
         db.query(PlateDetection).delete()
         db.commit()
@@ -433,7 +433,7 @@ async def create_sighting(file: UploadFile = File(...)):
 @app.get("/api/v1/state-analytics")
 def get_state_analytics():
     """Get state recognition analytics data."""
-    db = get_db()
+    db = SessionLocal()
     try:
         detections = db.query(PlateDetection).all()
         
