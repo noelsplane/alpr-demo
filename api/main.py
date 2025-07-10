@@ -7,7 +7,7 @@ from ultralytics import YOLO
 import easyocr
 import base64
 from io import BytesIO
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image, ImageEnhance
 from datetime import datetime
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine
@@ -16,80 +16,128 @@ from models import Base, PlateDetection
 from state_model import get_state_classifier
 from plate_filter_utils import extract_plate_number, detect_state_from_context
 import logging
-import re
+import requests
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Database setup
 engine = create_engine('sqlite:///detections.db')
 SessionLocal = sessionmaker(bind=engine)
 Base.metadata.create_all(bind=engine)
 
-
-def encode_image_to_base64(img_array):
-    img = Image.fromarray(img_array)
-    buffer = BytesIO()
-    img.save(buffer, format="JPEG")
-    encoded_string = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    return encoded_string
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
+# Initialize FastAPI app
 app = FastAPI()
 
-
+# Static files with no-cache headers
 class NoCacheStaticFiles(StaticFiles):
     async def get_response(self, path, scope):
         response = await super().get_response(path, scope)
         response.headers["Cache-Control"] = "no-cache"
         return response
 
-
 app.mount("/ui", NoCacheStaticFiles(directory="static", html=True), name="static")
 
-# Load the specialized license plate detection model
-license_plate_model_path = "../models/license_plate_yolov8.pt"
+# Load models
+license_plate_model_path = "models/license_plate_yolov8.pt"
 if os.path.exists(license_plate_model_path):
-    logger.info(f"Loading specialized license plate detection model")
+    logger.info("Loading specialized license plate detection model")
     model = YOLO(license_plate_model_path)
     logger.info("License plate model loaded successfully!")
 else:
-    logger.warning("License plate model not found")
-    model = YOLO("../models/yolov8n.pt")
+    logger.warning("License plate model not found, using default")
+    model = YOLO("yolov8n.pt")
 
-# Initialize EasyOCR with better settings
+# Initialize OCR and state classifier
 logger.info("Initializing EasyOCR...")
 ocr = easyocr.Reader(['en'], gpu=False)
-logger.info("EasyOCR initialized!")
-
 state_classifier = get_state_classifier()
+logger.info("Initialization complete!")
 
-LOG_DIR = "../logs"
-os.makedirs(LOG_DIR, exist_ok=True)
-
+# Configuration
 UPLOAD_DIR = "../data/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-# Create debug directory
-DEBUG_DIR = "debug_images"
-os.makedirs(DEBUG_DIR, exist_ok=True)
+PLATERECOGNIZER_TOKEN = "68f30562d40d16ba7dcfd9838dc8d5f27f4ebde7"
 
 
-@app.get("/")
-def root():
-    return {"message": "ALPR API is running with improved OCR"}
+# Helper functions
+def encode_image_to_base64(img_array):
+    """Convert numpy array to base64 string."""
+    img = Image.fromarray(img_array)
+    buffer = BytesIO()
+    img.save(buffer, format="JPEG")
+    return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+
+def get_db():
+    """Get database session."""
+    db = SessionLocal()
+    try:
+        return db
+    finally:
+        pass
+
+
+def enhance_plate_image(img):
+    """Enhance plate image for better OCR accuracy."""
+    pil_img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    
+    # Resize if too small
+    width, height = pil_img.size
+    if width < 200:
+        scale = 200 / width
+        new_width = int(width * scale)
+        new_height = int(height * scale)
+        pil_img = pil_img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    
+    # Enhance contrast and sharpness
+    pil_img = ImageEnhance.Contrast(pil_img).enhance(2.0)
+    pil_img = ImageEnhance.Sharpness(pil_img).enhance(2.0)
+    
+    return np.array(pil_img)
+
+
+def get_platerecognizer_results(image_path):
+    """Get plate and state info from PlateRecognizer API."""
+    try:
+        url = "https://api.platerecognizer.com/v1/plate-reader/"
+        headers = {"Authorization": f"Token {PLATERECOGNIZER_TOKEN}"}
+        data = {'regions': ['us']}  # Focus on US plates
+        
+        with open(image_path, 'rb') as fp:
+            response = requests.post(
+                url, 
+                files=dict(upload=fp), 
+                data=data, 
+                headers=headers, 
+                timeout=10
+            )
+        
+        if response.status_code in [200, 201]:
+            result = response.json()
+            if result.get('results'):
+                plate = result['results'][0]
+                pr_text = plate.get('plate', '')
+                pr_state = None
+                pr_state_conf = 0
+                
+                if plate.get('region'):
+                    region_code = plate['region'].get('code', '')
+                    if region_code.startswith('us-'):
+                        pr_state = region_code.split('-')[1].upper()
+                        pr_state_conf = plate['region'].get('score', 0)
+                
+                return pr_text, pr_state, pr_state_conf
+    except Exception as e:
+        logger.error(f"PlateRecognizer API error: {e}")
+    
+    return None, None, 0
 
 
 def save_detections_to_db(image_name, plates_detected):
-    db = SessionLocal()
+    """Save detection results to database."""
+    db = get_db()
     try:
         for plate in plates_detected:
             detection = PlateDetection(
@@ -113,12 +161,136 @@ def save_detections_to_db(image_name, plates_detected):
         db.close()
 
 
+# API Endpoints
+@app.get("/")
+def root():
+    return {"message": "ALPR API is running"}
+
+
+@app.post("/api/v1/sighting")
+async def create_sighting(file: UploadFile = File(...)):
+    """Process uploaded image for license plate detection."""
+    logger.info(f"Processing image: {file.filename}")
+    
+    # Save uploaded file
+    file_location = os.path.join(UPLOAD_DIR, file.filename)
+    with open(file_location, "wb") as f:
+        f.write(await file.read())
+
+    # Get PlateRecognizer results
+    pr_text, pr_state, pr_state_conf = get_platerecognizer_results(file_location)
+    if pr_state:
+        logger.info(f"PlateRecognizer detected: {pr_text} from {pr_state} (conf: {pr_state_conf:.2f})")
+
+    # Load and process image
+    img_bgr = cv2.imread(file_location)
+    results = model.predict(img_bgr, conf=0.25)[0]
+    boxes = results.boxes.xyxy.cpu().numpy()
+    
+    logger.info(f"Detected {len(boxes)} potential license plates")
+
+    plate_texts = []
+    for i, box in enumerate(boxes):
+        x1, y1, x2, y2 = map(int, box)
+        
+        # Add padding around detection
+        padding = 10
+        y1 = max(0, y1 - padding)
+        y2 = min(img_bgr.shape[0], y2 + padding)
+        x1 = max(0, x1 - padding)
+        x2 = min(img_bgr.shape[1], x2 + padding)
+        
+        # Crop plate region
+        cropped = img_bgr[y1:y2, x1:x2]
+        if cropped.shape[0] < 20 or cropped.shape[1] < 50:
+            continue
+        
+        cropped_rgb = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
+        
+        # Run OCR on original and enhanced versions
+        ocr_results = ocr.readtext(cropped_rgb, width_ths=0.7, height_ths=0.7)
+        enhanced = enhance_plate_image(cropped)
+        enhanced_results = ocr.readtext(enhanced, width_ths=0.7, height_ths=0.7)
+        all_results = ocr_results + enhanced_results
+        
+        # Extract plate text
+        plate_text, confidence = extract_plate_number(all_results)
+        logger.info(f"Local OCR extracted: '{plate_text}' (conf: {confidence})")
+        
+        # State detection strategy:
+        # 1. Use PlateRecognizer if available (best accuracy)
+        # 2. Fall back to pattern matching
+        # 3. Last resort: context detection
+        
+        state = None
+        state_conf = 0
+        detection_method = "none"
+        
+        if pr_state and pr_state_conf > 0.5 and i == 0:
+            state = pr_state
+            state_conf = pr_state_conf
+            detection_method = "platerecognizer"
+            logger.info(f"Using PlateRecognizer state: {state} (conf: {state_conf})")
+        elif plate_text:
+            # Try pattern matching
+            pattern_state, pattern_conf = state_classifier.classify_from_text(plate_text)
+            if pattern_state and pattern_conf > 0.6:
+                state = pattern_state
+                state_conf = pattern_conf
+                detection_method = "pattern"
+                logger.info(f"State '{state}' detected from pattern (conf: {state_conf})")
+            else:
+                # Last resort: context detection
+                context_state, context_conf = detect_state_from_context(all_results)
+                if context_state:
+                    state = context_state
+                    state_conf = context_conf
+                    detection_method = "context"
+                    logger.info(f"State '{state}' detected from context (conf: {state_conf})")
+        
+        # Save if valid plate found
+        if plate_text:
+            logger.info(f"=== Plate {i+1} Final Result ===")
+            logger.info(f"  Text: '{plate_text}' | State: {state or 'Unknown'} | Method: {detection_method}")
+            
+            plate_data = {
+                "text": plate_text,
+                "confidence": round(float(confidence), 2),
+                "box": [x1, y1, x2, y2],
+                "plate_image_base64": encode_image_to_base64(cropped_rgb),
+                "state": state,
+                "state_confidence": round(state_conf, 2) if state_conf else 0.0,
+                "detection_method": detection_method
+            }
+            
+            # Add PlateRecognizer comparison if available
+            if pr_text and i == 0:
+                plate_data["platerecognizer_comparison"] = {
+                    "text": pr_text,
+                    "state": pr_state,
+                    "state_confidence": round(pr_state_conf, 2) if pr_state_conf else 0.0
+                }
+            
+            plate_texts.append(plate_data)
+
+    # Save and return results
+    save_detections_to_db(file.filename, plate_texts)
+    
+    return JSONResponse(content={
+        "image": file.filename,
+        "timestamp": datetime.now().isoformat(),
+        "plates_detected": plate_texts
+    })
+
+
 @app.get("/api/v1/detections")
 def get_all_detections():
-    db = SessionLocal()
+    """Get all detection history."""
+    db = get_db()
     try:
         detections = db.query(PlateDetection).order_by(PlateDetection.timestamp.desc()).all()
         
+        # Group by image/timestamp
         grouped_detections = {}
         for detection in detections:
             key = f"{detection.image_name}_{detection.timestamp.isoformat()}"
@@ -140,300 +312,30 @@ def get_all_detections():
         
         return JSONResponse(content=list(grouped_detections.values()))
     except Exception as e:
-        return JSONResponse(content={"error": f"Failed to retrieve detections: {str(e)}"}, status_code=500)
+        return JSONResponse(content={"error": str(e)}, status_code=500)
     finally:
         db.close()
 
 
 @app.delete("/api/v1/detections")
 def clear_all_detections():
-    db = SessionLocal()
+    """Clear all detection history."""
+    db = get_db()
     try:
         db.query(PlateDetection).delete()
         db.commit()
         return JSONResponse(content={"message": "All detection history cleared successfully"})
     except Exception as e:
         db.rollback()
-        return JSONResponse(content={"error": f"Failed to clear history: {str(e)}"}, status_code=500)
+        return JSONResponse(content={"error": str(e)}, status_code=500)
     finally:
         db.close()
 
 
-def enhance_plate_image(img):
-    """Apply multiple enhancement techniques to improve OCR accuracy."""
-    # Convert to PIL Image for enhancement
-    pil_img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-    
-    # Resize if too small
-    width, height = pil_img.size
-    if width < 200:
-        scale = 200 / width
-        new_width = int(width * scale)
-        new_height = int(height * scale)
-        pil_img = pil_img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-    
-    # Enhance contrast
-    enhancer = ImageEnhance.Contrast(pil_img)
-    pil_img = enhancer.enhance(2.0)
-    
-    # Enhance sharpness
-    enhancer = ImageEnhance.Sharpness(pil_img)
-    pil_img = enhancer.enhance(2.0)
-    
-    # Convert back to numpy array
-    enhanced = np.array(pil_img)
-    
-    return enhanced
-
-
-def extract_state_from_plate_region(img, ocr, debug_name=""):
-    """Try to extract state by focusing on specific regions of the plate."""
-    height, width = img.shape[:2]
-    states_found = []
-    
-    # Define regions to search for state text
-    regions = [
-        ("top", img[0:int(height*0.35), :]),  # Top 35% - where state names often appear
-        ("middle", img[int(height*0.3):int(height*0.7), :]),  # Middle region
-        ("bottom", img[int(height*0.65):, :]),  # Bottom 35% - DMV URLs
-        ("full", img)  # Full image as fallback
-    ]
-    
-    for region_name, region in regions:
-        try:
-            # Skip if region is too small
-            if region.shape[0] < 10 or region.shape[1] < 10:
-                continue
-                
-            # Convert to RGB for OCR
-            if len(region.shape) == 2:
-                region_rgb = cv2.cvtColor(region, cv2.COLOR_GRAY2RGB)
-            else:
-                region_rgb = cv2.cvtColor(region, cv2.COLOR_BGR2RGB)
-            
-            # Try with different OCR parameters for better text detection
-            results = ocr.readtext(region_rgb, width_ths=0.5, height_ths=0.5, 
-                                  paragraph=True, decoder='beamsearch')
-            
-            # Log what we found in this region
-            if results:
-                logger.info(f"Region {region_name} OCR results:")
-                for result in results:
-                    if len(result) >= 2:
-                        logger.info(f"  - Text: '{result[1]}'")
-            
-            # Check for state indicators
-            state, conf = detect_state_from_context(results)
-            if state:
-                states_found.append((state, conf, region_name))
-                
-            # Also try enhanced version
-            try:
-                # Apply different preprocessing for state text
-                gray = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY) if len(region.shape) == 3 else region
-                # Try inverted (sometimes state text is light on dark)
-                inverted = cv2.bitwise_not(gray)
-                results_inv = ocr.readtext(inverted, width_ths=0.5, height_ths=0.5)
-                state_inv, conf_inv = detect_state_from_context(results_inv)
-                if state_inv and conf_inv > 0:
-                    states_found.append((state_inv, conf_inv, f"{region_name}_inverted"))
-            except:
-                pass
-                
-        except Exception as e:
-            logger.error(f"Error in region {region_name}: {e}")
-            continue
-    
-    # Return best state found
-    if states_found:
-        # Sort by confidence
-        states_found.sort(key=lambda x: x[1], reverse=True)
-        best_state = states_found[0]
-        logger.info(f"Best state found: {best_state[0]} in {best_state[2]} region (conf: {best_state[1]})")
-        return best_state[0], best_state[1]
-    
-    return None, 0
-
-
-def enhance_for_state_text(img):
-    """Special preprocessing for reading state names which are often in decorative fonts."""
-    # Convert to grayscale
-    if len(img.shape) == 3:
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    else:
-        gray = img.copy()
-    
-    # Apply CLAHE for better contrast
-    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-    enhanced = clahe.apply(gray)
-    
-    # Try multiple thresholding methods
-    variants = []
-    
-    # Standard binary
-    _, binary = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    variants.append(binary)
-    
-    # Inverted binary
-    variants.append(cv2.bitwise_not(binary))
-    
-    # Adaptive threshold
-    adaptive = cv2.adaptiveThreshold(enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                   cv2.THRESH_BINARY, 11, 2)
-    variants.append(adaptive)
-    
-    return variants
-
-
-@app.post("/api/v1/sighting")
-async def create_sighting(file: UploadFile = File(...)):
-    logger.info(f"Processing image: {file.filename}")
-    
-    file_location = os.path.join(UPLOAD_DIR, file.filename)
-    with open(file_location, "wb") as f:
-        f.write(await file.read())
-
-    img_bgr = cv2.imread(file_location)
-    
-    # Run license plate detection
-    results = model.predict(img_bgr, conf=0.25)[0]
-    boxes = results.boxes.xyxy.cpu().numpy()
-    
-    logger.info(f"Detected {len(boxes)} potential license plates")
-
-    plate_texts = []
-
-    for i, box in enumerate(boxes):
-        x1, y1, x2, y2 = map(int, box)
-        
-        # Add padding
-        padding = 10
-        y1 = max(0, y1 - padding)
-        y2 = min(img_bgr.shape[0], y2 + padding)
-        x1 = max(0, x1 - padding)
-        x2 = min(img_bgr.shape[1], x2 + padding)
-        
-        cropped = img_bgr[y1:y2, x1:x2]
-        
-        if cropped.shape[0] < 20 or cropped.shape[1] < 50:
-            continue
-        
-        # Save original crop for debugging
-        debug_name = f"{file.filename}_{i}"
-        debug_path = os.path.join(DEBUG_DIR, f"{debug_name}_original.jpg")
-        cv2.imwrite(debug_path, cropped)
-        
-        # Convert to RGB for OCR
-        cropped_rgb = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
-        
-        # Try OCR with better text grouping parameters
-        ocr_results = ocr.readtext(cropped_rgb, width_ths=0.7, height_ths=0.7)
-        
-        # Also try on enhanced image
-        enhanced = enhance_plate_image(cropped)
-        enhanced_results = ocr.readtext(enhanced, width_ths=0.7, height_ths=0.7)
-        
-        # Combine results
-        all_results = ocr_results + enhanced_results
-        
-        # Debug logging
-        logger.info(f"=== Plate {i+1} OCR Results ===")
-        logger.info(f"Number of OCR detections: {len(all_results)}")
-        for idx, result in enumerate(all_results):
-            if len(result) >= 2:
-                logger.info(f"  Detection {idx}: Text='{result[1]}', Conf={result[2] if len(result) > 2 else 'N/A'}")
-        
-        # Extract just the license plate number using our filter
-        plate_text, confidence = extract_plate_number(all_results)
-        logger.info(f"Extracted plate text: '{plate_text}' (conf: {confidence})")
-        
-        # Try multiple methods for state detection
-        state = None
-        state_conf = 0
-        
-        # Method 1: Try to detect state from the current OCR results
-        state, state_conf = detect_state_from_context(all_results)
-        if state:
-            logger.info(f"State '{state}' detected from plate OCR (conf: {state_conf})")
-        
-        # Method 2: Try focused region detection if no state found
-        if not state:
-            logger.info("Trying focused region state detection...")
-            state, state_conf = extract_state_from_plate_region(cropped, ocr, debug_name)
-        
-        # Method 3: Try larger context area
-        if not state:
-            logger.info("Trying expanded context for state detection...")
-            try:
-                # Expand search area significantly for state text
-                context_padding = 150  # Increased padding
-                context_y1 = max(0, y1 - context_padding)
-                context_y2 = min(img_bgr.shape[0], y2 + context_padding)
-                context_x1 = max(0, x1 - context_padding)
-                context_x2 = min(img_bgr.shape[1], x2 + context_padding)
-                
-                context_area = img_bgr[context_y1:context_y2, context_x1:context_x2]
-                context_rgb = cv2.cvtColor(context_area, cv2.COLOR_BGR2RGB)
-                
-                # Try with different OCR parameters
-                context_results = ocr.readtext(context_rgb, paragraph=True, width_ths=0.5)
-                
-                # Also try preprocessing variants
-                for variant in enhance_for_state_text(context_area):
-                    variant_results = ocr.readtext(variant)
-                    context_results.extend(variant_results)
-                
-                state, state_conf = detect_state_from_context(context_results)
-                
-                if state:
-                    logger.info(f"State '{state}' found in expanded context (conf: {state_conf})")
-                    
-            except Exception as e:
-                logger.error(f"Context state detection failed: {e}")
-        
-        # Method 4: Try pattern matching on the plate number
-        if not state and plate_text:
-            pattern_state, pattern_conf = state_classifier.classify_from_text(plate_text)
-            if pattern_state:
-                state = pattern_state
-                state_conf = pattern_conf
-                logger.info(f"State '{state}' detected from plate pattern (conf: {state_conf})")
-        
-        # Only save if we found a valid plate number
-        if plate_text:
-            logger.info(f"=== Plate {i+1} Final Result ===")
-            logger.info(f"  Plate Text: '{plate_text}'")
-            logger.info(f"  OCR Confidence: {confidence:.2f}")
-            logger.info(f"  State: {state or 'Unknown'}")
-            logger.info(f"  State Confidence: {state_conf:.2f}")
-            
-            plate_texts.append({
-                "text": plate_text,
-                "confidence": round(float(confidence), 2),
-                "box": [x1, y1, x2, y2],
-                "plate_image_base64": encode_image_to_base64(cropped_rgb),
-                "state": state,
-                "state_confidence": round(state_conf, 2) if state_conf else 0.0
-            })
-        else:
-            logger.warning(f"No valid plate number found in detection {i+1}")
-
-    # Save to database
-    save_detections_to_db(file.filename, plate_texts)
-    
-    response = {
-        "image": file.filename,
-        "timestamp": datetime.now().isoformat(),
-        "plates_detected": plate_texts
-    }
-
-    return JSONResponse(content=response)
-
-
 @app.get("/api/v1/state-analytics")
 def get_state_analytics():
-    """Get state recognition analytics data."""
-    db = SessionLocal()
+    """Get state recognition analytics."""
+    db = get_db()
     try:
         detections = db.query(PlateDetection).all()
         
@@ -445,6 +347,7 @@ def get_state_analytics():
         state_counts = {}
         confidence_sum = 0
         confidence_count = 0
+        method_counts = {'platerecognizer': 0, 'pattern': 0, 'context': 0, 'none': 0}
         
         for detection in detections:
             if detection.state and detection.state != 'UNKNOWN':
@@ -452,13 +355,6 @@ def get_state_analytics():
                 if detection.state_confidence:
                     confidence_sum += detection.state_confidence
                     confidence_count += 1
-        
-        # Method distribution (simplified for now)
-        method_counts = {
-            'pattern': states_identified * 0.7,
-            'context': states_identified * 0.2,
-            'visual': states_identified * 0.1
-        }
         
         analytics = {
             'summary': {
@@ -469,11 +365,10 @@ def get_state_analytics():
                 'unique_states': len(state_counts)
             },
             'state_distribution': state_counts,
-            'method_distribution': method_counts,
             'recent_detections': []
         }
         
-        # Add recent detections with state info
+        # Add recent detections
         recent = db.query(PlateDetection).order_by(PlateDetection.timestamp.desc()).limit(20).all()
         for det in recent:
             analytics['recent_detections'].append({
@@ -485,8 +380,7 @@ def get_state_analytics():
             })
         
         return JSONResponse(content=analytics)
-        
     except Exception as e:
-        return JSONResponse(content={"error": f"Failed to get analytics: {str(e)}"}, status_code=500)
+        return JSONResponse(content={"error": str(e)}, status_code=500)
     finally:
         db.close()
