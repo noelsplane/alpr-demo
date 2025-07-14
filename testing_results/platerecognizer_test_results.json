@@ -1,0 +1,37 @@
+{
+  "total": 4,
+  "with_state": 1,
+  "states_found": {
+    "NJ": 1
+  },
+  "detailed_results": [
+    {
+      "filename": "CA_SLAKDROG_80_304.jpg",
+      "text": "w36azl",
+      "score": 1.0,
+      "region": "NJ",
+      "region_score": 0.989
+    },
+    {
+      "filename": "plate_00158.jpg",
+      "text": "60a20880",
+      "score": 0.995,
+      "region": null,
+      "region_score": 0
+    },
+    {
+      "filename": "CA_20880_78_193.jpg",
+      "text": "60a20880",
+      "score": 0.99,
+      "region": null,
+      "region_score": 0
+    },
+    {
+      "filename": "plate_00301.jpg",
+      "text": "f65022",
+      "score": 0.95,
+      "region": null,
+      "region_score": 0
+    }
+  ]
+}

@@ -1,0 +1,626 @@
+{
+  "AL": [
+    {
+      "filename": "plate_01036.jpg",
+      "plate_text": "F405227",
+      "confidence": 0.38,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00699.jpg",
+      "plate_text": "ALK7444",
+      "confidence": 0.56,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00134.jpg",
+      "plate_text": "77529",
+      "confidence": 0.91,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00069.jpg",
+      "plate_text": "CZX830",
+      "confidence": 0.68,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00167.jpg",
+      "plate_text": "88270",
+      "confidence": 0.76,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00066.jpg",
+      "plate_text": "31532",
+      "confidence": 0.95,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00475.jpg",
+      "plate_text": "226911",
+      "confidence": 0.52,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00535.jpg",
+      "plate_text": "61386",
+      "confidence": 0.71,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00696.jpg",
+      "plate_text": "1083 38",
+      "confidence": 0.18,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00844.jpg",
+      "plate_text": "'70882",
+      "confidence": 0.92,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00810.jpg",
+      "plate_text": "17209",
+      "confidence": 0.37,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00895.jpg",
+      "plate_text": "123774",
+      "confidence": 0.5,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00332.jpg",
+      "plate_text": "BIF16159",
+      "confidence": 0.37,
+      "state": "AL",
+      "state_confidence": 0.7
+    },
+    {
+      "filename": "plate_00312.jpg",
+      "plate_text": "51993",
+      "confidence": 0.99,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00312.jpg",
+      "plate_text": "51993",
+      "confidence": 0.99,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00050.jpg",
+      "plate_text": "315292",
+      "confidence": 0.45,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00282.jpg",
+      "plate_text": "BAP935",
+      "confidence": 1.0,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00484.jpg",
+      "plate_text": "13930",
+      "confidence": 0.72,
+      "state": "AL",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00740.jpg",
+      "plate_text": "55025502",
+      "confidence": 1.0,
+      "state": "AL",
+      "state_confidence": 0.7
+    },
+    {
+      "filename": "plate_00508.jpg",
+      "plate_text": "59[052.97|",
+      "confidence": 0.53,
+      "state": "AL",
+      "state_confidence": 0.9
+    }
+  ],
+  "null": [
+    {
+      "filename": "plate_00898.jpg",
+      "plate_text": "61405227",
+      "confidence": 0.34,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00228.jpg",
+      "plate_text": "67F31118",
+      "confidence": 0.37,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00644.jpg",
+      "plate_text": "EIEJ",
+      "confidence": 0.35,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00769.jpg",
+      "plate_text": "61A89714",
+      "confidence": 0.29,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00262.jpg",
+      "plate_text": "59 K7",
+      "confidence": 0.34,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00122.jpg",
+      "plate_text": "TOY DR",
+      "confidence": 0.25,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00152.jpg",
+      "plate_text": "467A897|",
+      "confidence": 0.64,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00723.jpg",
+      "plate_text": "896U8960",
+      "confidence": 0.41,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00025.jpg",
+      "plate_text": "79217921",
+      "confidence": 0.29,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00086.jpg",
+      "plate_text": "13131313",
+      "confidence": 0.92,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00574.jpg",
+      "plate_text": "61AJ001",
+      "confidence": 0.6,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00598.jpg",
+      "plate_text": "81E98",
+      "confidence": 0.52,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00370.jpg",
+      "plate_text": "GROMEX",
+      "confidence": 0.98,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00894.jpg",
+      "plate_text": "SDHNY",
+      "confidence": 0.27,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00144.jpg",
+      "plate_text": "61C51332",
+      "confidence": 0.49,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00083.jpg",
+      "plate_text": "BUF04275",
+      "confidence": 0.25,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00017.jpg",
+      "plate_text": "EIF78904",
+      "confidence": 0.54,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00684.jpg",
+      "plate_text": "GUERRERO",
+      "confidence": 1.0,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00364.jpg",
+      "plate_text": "JA62 UAR",
+      "confidence": 0.67,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00308.jpg",
+      "plate_text": "DIMEH",
+      "confidence": 0.39,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00848.jpg",
+      "plate_text": "61177529",
+      "confidence": 0.28,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00563.jpg",
+      "plate_text": "59 T1",
+      "confidence": 0.82,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_01009.jpg",
+      "plate_text": "09950995",
+      "confidence": 0.97,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00791.jpg",
+      "plate_text": "40124012",
+      "confidence": 0.96,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00418.jpg",
+      "plate_text": "IILC1I3",
+      "confidence": 0.12,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00706.jpg",
+      "plate_text": "IBR93",
+      "confidence": 0.45,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00187.jpg",
+      "plate_text": "45-63]45*63",
+      "confidence": 0.52,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00242.jpg",
+      "plate_text": "34573457",
+      "confidence": 0.94,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00299.jpg",
+      "plate_text": "6M26M2",
+      "confidence": 0.62,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00146.jpg",
+      "plate_text": "61077529",
+      "confidence": 0.55,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_01012.jpg",
+      "plate_text": "93 C1",
+      "confidence": 0.62,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00457.jpg",
+      "plate_text": "54,050B8?",
+      "confidence": 0.25,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00905.jpg",
+      "plate_text": "59 F1",
+      "confidence": 0.77,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00664.jpg",
+      "plate_text": "57A69172",
+      "confidence": 0.47,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00473.jpg",
+      "plate_text": "61C47281",
+      "confidence": 0.28,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00573.jpg",
+      "plate_text": "61651332",
+      "confidence": 0.43,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_01078.jpg",
+      "plate_text": "61651332",
+      "confidence": 0.77,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00149.jpg",
+      "plate_text": "EIF63034",
+      "confidence": 0.46,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00099.jpg",
+      "plate_text": "51G4728",
+      "confidence": 0.32,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00121.jpg",
+      "plate_text": "65N2",
+      "confidence": 0.4,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00062.jpg",
+      "plate_text": "F1F73029",
+      "confidence": 0.16,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00804.jpg",
+      "plate_text": "HLI2N",
+      "confidence": 0.07,
+      "state": null,
+      "state_confidence": 0.0
+    },
+    {
+      "filename": "plate_00733.jpg",
+      "plate_text": "92769276",
+      "confidence": 1.0,
+      "state": null,
+      "state_confidence": 0.0
+    }
+  ],
+  "NJ": [
+    {
+      "filename": "plate_00193.jpg",
+      "plate_text": "68766876",
+      "confidence": 0.6,
+      "state": "NJ",
+      "state_confidence": 0.95
+    }
+  ],
+  "IL": [
+    {
+      "filename": "plate_00950.jpg",
+      "plate_text": "61625181",
+      "confidence": 0.71,
+      "state": "IL",
+      "state_confidence": 0.7
+    }
+  ],
+  "MT": [
+    {
+      "filename": "plate_00639.jpg",
+      "plate_text": "0039359S",
+      "confidence": 0.28,
+      "state": "MT",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00947.jpg",
+      "plate_text": "195U",
+      "confidence": 0.66,
+      "state": "MT",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00474.jpg",
+      "plate_text": "6F-8827",
+      "confidence": 0.4,
+      "state": "MT",
+      "state_confidence": 0.9
+    }
+  ],
+  "AZ": [
+    {
+      "filename": "plate_00786.jpg",
+      "plate_text": "EF-59011",
+      "confidence": 0.23,
+      "state": "AZ",
+      "state_confidence": 0.9
+    }
+  ],
+  "CA": [
+    {
+      "filename": "plate_00158.jpg",
+      "plate_text": "20880",
+      "confidence": 0.78,
+      "state": "CA",
+      "state_confidence": 0.95
+    },
+    {
+      "filename": "plate_00301.jpg",
+      "plate_text": "F 65022",
+      "confidence": 0.98,
+      "state": "CA",
+      "state_confidence": 0.9
+    },
+    {
+      "filename": "plate_00429.jpg",
+      "plate_text": "PINKIE",
+      "confidence": 0.37,
+      "state": "CA",
+      "state_confidence": 0.95
+    }
+  ],
+  "MN": [
+    {
+      "filename": "plate_00221.jpg",
+      "plate_text": "HDT -72",
+      "confidence": 0.68,
+      "state": "MN",
+      "state_confidence": 0.7
+    }
+  ],
+  "IN": [
+    {
+      "filename": "plate_00139.jpg",
+      "plate_text": "10U263",
+      "confidence": 0.68,
+      "state": "IN",
+      "state_confidence": 0.9
+    }
+  ],
+  "MO": [
+    {
+      "filename": "plate_00174.jpg",
+      "plate_text": "SOLD OLIL",
+      "confidence": 0.14,
+      "state": "MO",
+      "state_confidence": 0.7
+    }
+  ],
+  "HI": [
+    {
+      "filename": "plate_00991.jpg",
+      "plate_text": "B1F07973",
+      "confidence": 0.44,
+      "state": "HI",
+      "state_confidence": 0.7
+    }
+  ],
+  "WV": [
+    {
+      "filename": "plate_00294.jpg",
+      "plate_text": "00BZ",
+      "confidence": 0.27,
+      "state": "WV",
+      "state_confidence": 0.7
+    }
+  ],
+  "NC": [
+    {
+      "filename": "plate_01026.jpg",
+      "plate_text": "G1C37675",
+      "confidence": 0.36,
+      "state": "NC",
+      "state_confidence": 0.7
+    }
+  ],
+  "ID": [
+    {
+      "filename": "plate_00902.jpg",
+      "plate_text": "61F63034",
+      "confidence": 0.29,
+      "state": "ID",
+      "state_confidence": 0.7
+    }
+  ],
+  "VA": [
+    {
+      "filename": "plate_00129.jpg",
+      "plate_text": "59 VA",
+      "confidence": 0.43,
+      "state": "VA",
+      "state_confidence": 0.7
+    },
+    {
+      "filename": "plate_00172.jpg",
+      "plate_text": "VIRGINIA",
+      "confidence": 0.88,
+      "state": "VA",
+      "state_confidence": 0.95
+    }
+  ],
+  "CO": [
+    {
+      "filename": "plate_00488.jpg",
+      "plate_text": "61406",
+      "confidence": 0.95,
+      "state": "CO",
+      "state_confidence": 0.7
+    }
+  ],
+  "NH": [
+    {
+      "filename": "plate_00975.jpg",
+      "plate_text": "HHNH",
+      "confidence": 0.13,
+      "state": "NH",
+      "state_confidence": 0.7
+    }
+  ],
+  "WI": [
+    {
+      "filename": "plate_00494.jpg",
+      "plate_text": "6IF 5901",
+      "confidence": 0.39,
+      "state": "WI",
+      "state_confidence": 0.7
+    }
+  ]
+}
