@@ -1,0 +1,51 @@
+{
+  "timestamp": "2025-07-15T13:22:36.026785",
+  "result": [
+    {
+      "plate": "w35azl",
+      "state": "NJ",
+      "state_confidence": 0.935,
+      "vehicle": {
+        "type": "Sedan",
+        "type_confidence": 0.576,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 1630,
+        "ymin": 1458,
+        "xmax": 1887,
+        "ymax": 1591
+      }
+    },
+    {
+      "plate": "w36azl",
+      "state": "NJ",
+      "state_confidence": 0.987,
+      "vehicle": {
+        "type": "Sedan",
+        "type_confidence": 0.808,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 259,
+        "ymin": 1425,
+        "xmax": 405,
+        "ymax": 1526
+      }
+    }
+  ]
+}

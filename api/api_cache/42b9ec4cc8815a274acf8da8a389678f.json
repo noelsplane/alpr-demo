@@ -1,0 +1,51 @@
+{
+  "timestamp": "2025-07-15T13:28:38.819708",
+  "result": [
+    {
+      "plate": "kbr6005",
+      "state": "NC",
+      "state_confidence": 0.93,
+      "vehicle": {
+        "type": "Sedan",
+        "type_confidence": 0.928,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 3132,
+        "ymin": 2127,
+        "xmax": 3468,
+        "ymax": 2301
+      }
+    },
+    {
+      "plate": "kbr6004",
+      "state": "NC",
+      "state_confidence": 0.867,
+      "vehicle": {
+        "type": "SUV",
+        "type_confidence": 0.842,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 448,
+        "ymin": 1737,
+        "xmax": 759,
+        "ymax": 1882
+      }
+    }
+  ]
+}

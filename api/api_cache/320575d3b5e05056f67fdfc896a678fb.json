@@ -1,0 +1,51 @@
+{
+  "timestamp": "2025-07-15T13:22:21.667160",
+  "result": [
+    {
+      "plate": "3a0bdut",
+      "state": "AL",
+      "state_confidence": 0.757,
+      "vehicle": {
+        "type": "Pickup Truck",
+        "type_confidence": 0.889,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 357,
+        "ymin": 1390,
+        "xmax": 746,
+        "ymax": 1579
+      }
+    },
+    {
+      "plate": "3a0bdur",
+      "state": "AL",
+      "state_confidence": 0.818,
+      "vehicle": {
+        "type": "SUV",
+        "type_confidence": 0.804,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 2819,
+        "ymin": 1036,
+        "xmax": 3115,
+        "ymax": 1198
+      }
+    }
+  ]
+}

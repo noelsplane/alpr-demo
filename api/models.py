@@ -15,7 +15,20 @@ class PlateDetection(Base):
     y1 = Column(Integer)
     x2 = Column(Integer)
     y2 = Column(Integer)
-    plate_image_base64 = Column(Text)  # Store base64 encoded cropped plate image
-    state = Column(String, nullable=True)  # State code (e.g., 'CA', 'NY')
-    state_confidence = Column(Float, default=0.0)  # Confidence in state detection
+    plate_image_base64 = Column(Text)
+    state = Column(String, nullable=True)
+    state_confidence = Column(Float, default=0.0)
+    
+    # New vehicle attribute fields
+    vehicle_type = Column(String, nullable=True)
+    vehicle_type_confidence = Column(Float, default=0.0)
+    vehicle_make = Column(String, nullable=True)
+    vehicle_make_confidence = Column(Float, default=0.0)
+    vehicle_model = Column(String, nullable=True)
+    vehicle_model_confidence = Column(Float, default=0.0)
+    vehicle_color = Column(String, nullable=True)
+    vehicle_color_confidence = Column(Float, default=0.0)
+    vehicle_year = Column(String, nullable=True)
+    vehicle_year_confidence = Column(Float, default=0.0)
+    
     timestamp = Column(DateTime, default=datetime.utcnow)
