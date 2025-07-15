@@ -17,10 +17,13 @@ from state_model import get_state_classifier
 from plate_filter_utils import extract_plate_number, detect_state_from_context
 import logging
 import requests
+from dotenv import load_dotenv
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+load_dotenv()
+PLATERECOGNIZER_TOKEN = os.getenv("PLATERECOGNIZER_TOKEN")
 
 # Database setup
 engine = create_engine('sqlite:///detections.db')

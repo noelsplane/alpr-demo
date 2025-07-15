@@ -1,12 +1,29 @@
+# Core FastAPI dependencies
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 pydantic==2.5.0
 python-multipart==0.0.6
+
+# PyTorch - specific versions that work with the YOLO model
+torch==2.2.0+cpu
+torchvision==0.17.0+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# Computer Vision and ML
 opencv-python==4.8.1.78
 ultralytics==8.0.200
-easyocr==1.7.0
+easyocr==1.7.2
 Pillow==10.1.0
-numpy==1.24.3
-sqlalchemy
+numpy==1.26.2
+
+# Database
+sqlalchemy==2.0.23
+
+# OCR
 pytesseract==0.3.10
-onnxruntime
+
+# ONNX Runtime
+onnxruntime==1.17.0
+
+# HTTP requests
+requests==2.31.0
