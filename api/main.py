@@ -18,6 +18,10 @@ from plate_filter_utils import extract_plate_number, detect_state_from_context
 import logging
 import requests
 from dotenv import load_dotenv
+from platerecognizer_manager import pr_manager
+import json
+from difflib import SequenceMatcher
+from pathlib import Path
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -102,43 +106,92 @@ def enhance_plate_image(img):
 
 
 def get_platerecognizer_results(image_path):
-    """Get plate and state info from PlateRecognizer API."""
-    try:
-        url = "https://api.platerecognizer.com/v1/plate-reader/"
-        headers = {"Authorization": f"Token {PLATERECOGNIZER_TOKEN}"}
-        data = {'regions': ['us']}  # Focus on US plates
-        
-        with open(image_path, 'rb') as fp:
-            response = requests.post(
-                url, 
-                files=dict(upload=fp), 
-                data=data, 
-                headers=headers, 
-                timeout=10
-            )
-        
-        if response.status_code in [200, 201]:
-            result = response.json()
-            if result.get('results'):
-                plate = result['results'][0]
-                pr_text = plate.get('plate', '')
-                pr_state = None
-                pr_state_conf = 0
-                
-                if plate.get('region'):
-                    region_code = plate['region'].get('code', '')
-                    if region_code.startswith('us-'):
-                        pr_state = region_code.split('-')[1].upper()
-                        pr_state_conf = plate['region'].get('score', 0)
-                
-                return pr_text, pr_state, pr_state_conf
-    except Exception as e:
-        logger.error(f"PlateRecognizer API error: {e}")
+    """Get plate, state, and vehicle info from PlateRecognizer API."""
     
-    return None, None, 0
+    def _api_call(path):
+        """Inner function that makes the actual API call."""
+        try:
+            url = "https://api.platerecognizer.com/v1/plate-reader/"
+            headers = {"Authorization": f"Token {PLATERECOGNIZER_TOKEN}"}
+            
+            # Updated data to request vehicle attributes
+            data = {
+                'regions': ['us'],
+                'mmc': 'true',  # Enable Make, Model, Color detection
+                'config': json.dumps({
+                    'mmc': True,
+                    'mode': 'fast'
+                })
+            }
+            
+            with open(path, 'rb') as fp:
+                response = requests.post(
+                    url, 
+                    files=dict(upload=fp), 
+                    data=data, 
+                    headers=headers, 
+                    timeout=10
+                )
+            
+            logger.info(f"PlateRecognizer response status: {response.status_code}")
+            
+            if response.status_code in [200, 201]:
+                result = response.json()
+                logger.info(f"PlateRecognizer raw response: {json.dumps(result, indent=2)}")
+                
+                # Return ALL plates found by PlateRecognizer
+                all_plates = []
+                
+                for plate_result in result.get('results', []):
+                    # Extract plate info
+                    pr_text = plate_result.get('plate', '')
+                    pr_state = None
+                    pr_state_conf = 0
+                    
+                    if plate_result.get('region'):
+                        region_code = plate_result['region'].get('code', '')
+                        if region_code.startswith('us-'):
+                            pr_state = region_code.split('-')[1].upper()
+                            pr_state_conf = plate_result['region'].get('score', 0)
+                    
+                    # Extract vehicle attributes
+                    vehicle_info = plate_result.get('vehicle', {})
+                    
+                    vehicle_data = {
+                        'type': vehicle_info.get('type'),
+                        'type_confidence': vehicle_info.get('score', 0),
+                        'make': vehicle_info.get('make'),
+                        'make_confidence': vehicle_info.get('make_score', 0),
+                        'model': vehicle_info.get('model'),
+                        'model_confidence': vehicle_info.get('model_score', 0),
+                        'color': vehicle_info.get('color'),
+                        'color_confidence': vehicle_info.get('color_score', 0),
+                        'year': vehicle_info.get('year'),
+                        'year_confidence': vehicle_info.get('year_score', 0),
+                    }
+                    
+                    all_plates.append({
+                        'plate': pr_text,
+                        'state': pr_state,
+                        'state_confidence': pr_state_conf,
+                        'vehicle': vehicle_data,
+                        'box': plate_result.get('box', {})
+                    })
+                
+                return all_plates if all_plates else None
+            else:
+                logger.error(f"PlateRecognizer API error: {response.status_code} - {response.text}")
+                    
+        except Exception as e:
+            logger.error(f"PlateRecognizer API error: {e}")
+        
+        return None
+    
+    # Use the manager to handle caching and rate limiting
+    return pr_manager.process_image(image_path, _api_call)
+    
 
-
-def save_detections_to_db(image_name, plates_detected):
+def save_detections_to_db(image_name, plates_detected, vehicle_info=None):
     """Save detection results to database."""
     db = get_db()
     try:
@@ -155,6 +208,20 @@ def save_detections_to_db(image_name, plates_detected):
                 state=plate.get("state"),
                 state_confidence=plate.get("state_confidence", 0.0)
             )
+            
+            # Add vehicle attributes if available
+            if vehicle_info:
+                detection.vehicle_type = vehicle_info.get('type')
+                detection.vehicle_type_confidence = vehicle_info.get('type_confidence', 0.0)
+                detection.vehicle_make = vehicle_info.get('make')
+                detection.vehicle_make_confidence = vehicle_info.get('make_confidence', 0.0)
+                detection.vehicle_model = vehicle_info.get('model')
+                detection.vehicle_model_confidence = vehicle_info.get('model_confidence', 0.0)
+                detection.vehicle_color = vehicle_info.get('color')
+                detection.vehicle_color_confidence = vehicle_info.get('color_confidence', 0.0)
+                detection.vehicle_year = vehicle_info.get('year')
+                detection.vehicle_year_confidence = vehicle_info.get('year_confidence', 0.0)
+            
             db.add(detection)
         db.commit()
     except Exception as e:
@@ -162,7 +229,6 @@ def save_detections_to_db(image_name, plates_detected):
         logger.error(f"Error saving to database: {e}")
     finally:
         db.close()
-
 
 # API Endpoints
 @app.get("/")
@@ -181,108 +247,122 @@ async def create_sighting(file: UploadFile = File(...)):
         f.write(await file.read())
 
     # Get PlateRecognizer results
-    pr_text, pr_state, pr_state_conf = get_platerecognizer_results(file_location)
-    if pr_state:
-        logger.info(f"PlateRecognizer detected: {pr_text} from {pr_state} (conf: {pr_state_conf:.2f})")
-
-    # Load and process image
-    img_bgr = cv2.imread(file_location)
-    results = model.predict(img_bgr, conf=0.25)[0]
-    boxes = results.boxes.xyxy.cpu().numpy()
-    
-    logger.info(f"Detected {len(boxes)} potential license plates")
+    pr_all_results = get_platerecognizer_results(file_location)
+    pr_plates = pr_all_results if pr_all_results else []
 
     plate_texts = []
-    for i, box in enumerate(boxes):
-        x1, y1, x2, y2 = map(int, box)
+    
+    if pr_plates:
+        logger.info(f"PlateRecognizer found {len(pr_plates)} plates")
         
-        # Add padding around detection
-        padding = 10
-        y1 = max(0, y1 - padding)
-        y2 = min(img_bgr.shape[0], y2 + padding)
-        x1 = max(0, x1 - padding)
-        x2 = min(img_bgr.shape[1], x2 + padding)
+        # Load image for cropping plate regions
+        img_bgr = cv2.imread(file_location)
         
-        # Crop plate region
-        cropped = img_bgr[y1:y2, x1:x2]
-        if cropped.shape[0] < 20 or cropped.shape[1] < 50:
-            continue
-        
-        cropped_rgb = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
-        
-        # Run OCR on original and enhanced versions
-        ocr_results = ocr.readtext(cropped_rgb, width_ths=0.7, height_ths=0.7)
-        enhanced = enhance_plate_image(cropped)
-        enhanced_results = ocr.readtext(enhanced, width_ths=0.7, height_ths=0.7)
-        all_results = ocr_results + enhanced_results
-        
-        # Extract plate text
-        plate_text, confidence = extract_plate_number(all_results)
-        logger.info(f"Local OCR extracted: '{plate_text}' (conf: {confidence})")
-        
-        # State detection strategy:
-        # 1. Use PlateRecognizer if available (best accuracy)
-        # 2. Fall back to pattern matching
-        # 3. Last resort: context detection
-        
-        state = None
-        state_conf = 0
-        detection_method = "none"
-        
-        if pr_state and pr_state_conf > 0.5 and i == 0:
-            state = pr_state
-            state_conf = pr_state_conf
-            detection_method = "platerecognizer"
-            logger.info(f"Using PlateRecognizer state: {state} (conf: {state_conf})")
-        elif plate_text:
-            # Try pattern matching
-            pattern_state, pattern_conf = state_classifier.classify_from_text(plate_text)
-            if pattern_state and pattern_conf > 0.6:
-                state = pattern_state
-                state_conf = pattern_conf
-                detection_method = "pattern"
-                logger.info(f"State '{state}' detected from pattern (conf: {state_conf})")
-            else:
-                # Last resort: context detection
-                context_state, context_conf = detect_state_from_context(all_results)
-                if context_state:
-                    state = context_state
-                    state_conf = context_conf
-                    detection_method = "context"
-                    logger.info(f"State '{state}' detected from context (conf: {state_conf})")
-        
-        # Save if valid plate found
-        if plate_text:
-            logger.info(f"=== Plate {i+1} Final Result ===")
-            logger.info(f"  Text: '{plate_text}' | State: {state or 'Unknown'} | Method: {detection_method}")
+        for idx, pr_plate in enumerate(pr_plates):
+            logger.info(f"PR Plate {idx+1}: {pr_plate['plate']} - {pr_plate.get('state', 'Unknown')} (conf: {pr_plate.get('state_confidence', 0):.3f})")
             
-            plate_data = {
-                "text": plate_text,
-                "confidence": round(float(confidence), 2),
-                "box": [x1, y1, x2, y2],
-                "plate_image_base64": encode_image_to_base64(cropped_rgb),
-                "state": state,
-                "state_confidence": round(state_conf, 2) if state_conf else 0.0,
-                "detection_method": detection_method
-            }
-            
-            # Add PlateRecognizer comparison if available
-            if pr_text and i == 0:
-                plate_data["platerecognizer_comparison"] = {
-                    "text": pr_text,
-                    "state": pr_state,
-                    "state_confidence": round(pr_state_conf, 2) if pr_state_conf else 0.0
+            # Get the bounding box from PlateRecognizer
+            box = pr_plate.get('box', {})
+            if box:
+                x1 = box.get('xmin', 0)
+                y1 = box.get('ymin', 0)
+                x2 = box.get('xmax', 100)
+                y2 = box.get('ymax', 100)
+                
+                # Crop the plate region
+                cropped = img_bgr[y1:y2, x1:x2]
+                cropped_rgb = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
+                
+                plate_data = {
+                    "text": pr_plate['plate'].upper(),
+                    "confidence": 0.9,  # PlateRecognizer is generally very accurate
+                    "box": [x1, y1, x2, y2],
+                    "plate_image_base64": encode_image_to_base64(cropped_rgb),
+                    "state": pr_plate.get('state'),
+                    "state_confidence": pr_plate.get('state_confidence', 0),
+                    "detection_method": "platerecognizer"
                 }
+                
+                # Add vehicle info if available
+                vehicle_info = pr_plate.get('vehicle', {})
+                if vehicle_info and vehicle_info.get('type'):
+                    plate_data["vehicle_type"] = vehicle_info.get('type')
+                    plate_data["vehicle_type_confidence"] = vehicle_info.get('type_confidence', 0)
+                
+                plate_texts.append(plate_data)
+                
+                logger.info(f"=== Plate {idx+1} Final Result ===")
+                logger.info(f"  Text: '{plate_data['text']}' | State: {plate_data['state'] or 'Unknown'} | Method: platerecognizer")
+    else:
+        # Fallback to local detection if PlateRecognizer fails
+        logger.info("No PlateRecognizer results, falling back to local detection")
+        
+        img_bgr = cv2.imread(file_location)
+        results = model.predict(img_bgr, conf=0.25)[0]
+        boxes = results.boxes.xyxy.cpu().numpy()
+        
+        logger.info(f"Detected {len(boxes)} potential license plates locally")
+
+        for i, box in enumerate(boxes):
+            x1, y1, x2, y2 = map(int, box)
             
-            plate_texts.append(plate_data)
+            # Add padding around detection
+            padding = 10
+            y1 = max(0, y1 - padding)
+            y2 = min(img_bgr.shape[0], y2 + padding)
+            x1 = max(0, x1 - padding)
+            x2 = min(img_bgr.shape[1], x2 + padding)
+            
+            # Crop plate region
+            cropped = img_bgr[y1:y2, x1:x2]
+            if cropped.shape[0] < 20 or cropped.shape[1] < 50:
+                continue
+            
+            cropped_rgb = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
+            
+            # Run OCR
+            ocr_results = ocr.readtext(cropped_rgb, width_ths=0.7, height_ths=0.7)
+            enhanced = enhance_plate_image(cropped)
+            enhanced_results = ocr.readtext(enhanced, width_ths=0.7, height_ths=0.7)
+            all_results = ocr_results + enhanced_results
+            
+            # Extract plate text
+            plate_text, confidence = extract_plate_number(all_results)
+            
+            if plate_text:
+                # Try pattern matching for state
+                state = None
+                state_conf = 0
+                pattern_state, pattern_conf = state_classifier.classify_from_text(plate_text)
+                if pattern_state and pattern_conf > 0.6:
+                    state = pattern_state
+                    state_conf = pattern_conf
+                
+                plate_data = {
+                    "text": plate_text,
+                    "confidence": round(float(confidence), 2),
+                    "box": [x1, y1, x2, y2],
+                    "plate_image_base64": encode_image_to_base64(cropped_rgb),
+                    "state": state,
+                    "state_confidence": round(state_conf, 2) if state_conf else 0.0,
+                    "detection_method": "local"
+                }
+                
+                plate_texts.append(plate_data)
+                logger.info(f"=== Plate {i+1} Final Result ===")
+                logger.info(f"  Text: '{plate_text}' | State: {state or 'Unknown'} | Method: local")
+
+    # Get vehicle info from first PlateRecognizer result for database
+    pr_vehicle_info = pr_plates[0].get('vehicle', {}) if pr_plates else None
 
     # Save and return results
-    save_detections_to_db(file.filename, plate_texts)
+    save_detections_to_db(file.filename, plate_texts, pr_vehicle_info)
     
     return JSONResponse(content={
         "image": file.filename,
         "timestamp": datetime.now().isoformat(),
-        "plates_detected": plate_texts
+        "plates_detected": plate_texts,
+        "vehicle_info": pr_vehicle_info if pr_vehicle_info else None
     })
 
 
@@ -387,3 +467,8 @@ def get_state_analytics():
         return JSONResponse(content={"error": str(e)}, status_code=500)
     finally:
         db.close()
+
+@app.get("/api/v1/platerecognizer/usage")
+def get_api_usage():
+    """Get PlateRecognizer API usage statistics."""
+    return pr_manager.get_usage_report()
