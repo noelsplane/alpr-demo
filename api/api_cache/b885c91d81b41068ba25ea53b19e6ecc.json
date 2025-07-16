@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-15T13:38:44.493289",
+  "result": [
+    {
+      "plate": "axu030",
+      "state": "NV",
+      "state_confidence": 0.606,
+      "vehicle": {
+        "type": "Unknown",
+        "type_confidence": 0.0,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 27,
+        "ymin": 28,
+        "xmax": 1172,
+        "ymax": 563
+      }
+    }
+  ]
+}

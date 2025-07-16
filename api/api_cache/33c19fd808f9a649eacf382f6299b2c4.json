@@ -1,0 +1,74 @@
+{
+  "timestamp": "2025-07-15T13:38:04.557162",
+  "result": [
+    {
+      "plate": "am74043",
+      "state": "CT",
+      "state_confidence": 0.936,
+      "vehicle": {
+        "type": "Sedan",
+        "type_confidence": 0.941,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 1655,
+        "ymin": 956,
+        "xmax": 1920,
+        "ymax": 1088
+      }
+    },
+    {
+      "plate": "ah14623",
+      "state": "CT",
+      "state_confidence": 0.544,
+      "vehicle": {
+        "type": "Sedan",
+        "type_confidence": 0.959,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 373,
+        "ymin": 876,
+        "xmax": 480,
+        "ymax": 921
+      }
+    },
+    {
+      "plate": "aa48004",
+      "state": "AR",
+      "state_confidence": 0.092,
+      "vehicle": {
+        "type": "Sedan",
+        "type_confidence": 0.81,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 1047,
+        "ymin": 791,
+        "xmax": 1127,
+        "ymax": 820
+      }
+    }
+  ]
+}

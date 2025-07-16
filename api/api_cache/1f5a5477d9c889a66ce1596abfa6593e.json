@@ -1,0 +1,51 @@
+{
+  "timestamp": "2025-07-15T13:39:05.500658",
+  "result": [
+    {
+      "plate": "319zba",
+      "state": "AZ",
+      "state_confidence": 0.551,
+      "vehicle": {
+        "type": "Van",
+        "type_confidence": 0.735,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 1925,
+        "ymin": 771,
+        "xmax": 2119,
+        "ymax": 859
+      }
+    },
+    {
+      "plate": "cls7145",
+      "state": "AZ",
+      "state_confidence": 0.952,
+      "vehicle": {
+        "type": "SUV",
+        "type_confidence": 0.716,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 414,
+        "ymin": 712,
+        "xmax": 558,
+        "ymax": 780
+      }
+    }
+  ]
+}

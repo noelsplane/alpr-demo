@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-15T13:38:29.924030",
+  "result": [
+    {
+      "plate": "43856",
+      "state": null,
+      "state_confidence": 0,
+      "vehicle": {
+        "type": "Unknown",
+        "type_confidence": 0.0,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 17,
+        "ymin": 13,
+        "xmax": 668,
+        "ymax": 279
+      }
+    }
+  ]
+}

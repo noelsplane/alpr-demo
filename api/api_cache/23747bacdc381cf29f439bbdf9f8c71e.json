@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-15T13:59:08.418335",
+  "result": [
+    {
+      "plate": "284fh8",
+      "state": "MA",
+      "state_confidence": 0.446,
+      "vehicle": {
+        "type": "Sedan",
+        "type_confidence": 0.864,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 41,
+        "ymin": 73,
+        "xmax": 133,
+        "ymax": 118
+      }
+    }
+  ]
+}
