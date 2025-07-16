@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vehicle Profiles Dashboard</title>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #000000 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 2rem;
+        color: #333;
+    }
+    
+    .dashboard {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+    
+    h1 {
+        text-align: center;
+        color: #2c3e50;
+        margin-bottom: 2rem;
+        font-size: 2.5rem;
+        font-weight: 300;
+    }
+    
+    .controls {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .control-group {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+    
+    button, select, input {
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        border: 2px solid #667eea;
+        background: white;
+        color: #667eea;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    button:hover, select:hover {
+        background: #667eea;
+        color: white;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: linear-gradient(145deg, #ffffff, #f0f0f0);
+        padding: 1.5rem;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #667eea;
+        margin: 0.5rem 0;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .profiles-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .profile-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .profile-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    }
+    
+    .image-gallery {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        margin: 1rem 0;
+        padding: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+    
+    .plate-image-container {
+        position: relative;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    }
+    
+    .plate-image-container:hover {
+        transform: scale(1.05);
+        z-index: 10;
+    }
+    
+    .plate-image {
+        width: 100%;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .full-vehicle-image {
+        width: 100%;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        cursor: zoom-in;
+    }
+    
+    .image-info {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        font-size: 0.7rem;
+        padding: 2px 4px;
+        text-align: center;
+        border-radius: 0 0 5px 5px;
+    }
+    
+    .image-timestamp {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        font-size: 0.7rem;
+        padding: 2px 4px;
+        text-align: center;
+        border-radius: 0 0 5px 5px;
+    }
+    
+    .no-images {
+        text-align: center;
+        color: #6c757d;
+        padding: 1rem;
+        font-style: italic;
+    }
+    
+    .profile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .vehicle-type {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .confidence-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .confidence-high { background: #d4edda; color: #155724; }
+    .confidence-medium { background: #fff3cd; color: #856404; }
+    .confidence-low { background: #f8d7da; color: #721c24; }
+    
+    .plate-list {
+        margin: 0.5rem 0;
+    }
+    
+    .plate-number {
+        display: inline-block;
+        background: #667eea;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-weight: 600;
+        margin: 0.25rem;
+    }
+    
+    .attribute-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .attribute-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .anomaly-section {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: #f8d7da;
+        border-radius: 10px;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .anomaly-item {
+        margin: 0.5rem 0;
+        font-size: 0.9rem;
+    }
+    
+    .suspicious-filter {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .suspicious-filter:hover {
+        background: #c82333;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 2rem;
+        font-size: 1.2rem;
+        color: #667eea;
+    }
+    
+    .error {
+        text-align: center;
+        padding: 2rem;
+        color: #dc3545;
+        background: #f8d7da;
+        border-radius: 15px;
+    }
+    
+    .back-link {
+        display: inline-block;
+        padding: 12px 24px;
+        background: #667eea;
+        color: white;
+        text-decoration: none;
+        border-radius: 25px;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .back-link:hover {
+        background: #5a67d8;
+        transform: translateY(-2px);
+    }
+    
+    /* Modal image cursor */
+    .plate-image {
+        cursor: zoom-in;
+    }
+</style>
+</head>
+<body>
+    <div class="dashboard">
+        <h1>Vehicle Profiles Dashboard</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <a href="index.html" class="back-link">← Back to Upload</a>
+                <button onclick="refreshProfiles()">🔄 Refresh</button>
+            </div>
+            <div class="control-group">
+                <label>Min Confidence:</label>
+                <select id="confidenceFilter" onchange="refreshProfiles()">
+                    <option value="0">All</option>
+                    <option value="0.5">50%+</option>
+                    <option value="0.7">70%+</option>
+                    <option value="0.9">90%+</option>
+                </select>
+                
+                <label>Time Window:</label>
+                <select id="timeWindow" onchange="refreshProfiles()">
+                    <option value="">All Time</option>
+                    <option value="24">Last 24 Hours</option>
+                    <option value="168">Last Week</option>
+                    <option value="720">Last Month</option>
+                </select>
+                
+                <button class="suspicious-filter" onclick="showSuspicious()">
+                    ⚠️ Show Suspicious Only
+                </button>
+            </div>
+        </div>
+        
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-label">Total Profiles</div>
+                <div class="stat-value" id="totalProfiles">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Detections</div>
+                <div class="stat-value" id="totalDetections">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Suspicious Vehicles</div>
+                <div class="stat-value" id="suspiciousCount">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">High Confidence</div>
+                <div class="stat-value" id="highConfidence">-</div>
+            </div>
+        </div>
+        
+        <div id="profilesContainer">
+            <div class="loading">Loading vehicle profiles...</div>
+        </div>
+    </div>
+
+    <script>
+        let allProfiles = [];
+        let currentFilter = 'all';
+        
+        async function loadProfiles() {
+            const container = document.getElementById('profilesContainer');
+            container.innerHTML = '<div class="loading">Loading vehicle profiles...</div>';
+            
+            try {
+                const confidence = document.getElementById('confidenceFilter').value;
+                const timeWindow = document.getElementById('timeWindow').value;
+                
+                let url = `/api/v1/vehicle-profiles?min_confidence=${confidence}`;
+                if (timeWindow) {
+                    url += `&time_window_hours=${timeWindow}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    allProfiles = data.profiles;
+                    updateStats(data.stats);
+                    displayProfiles(allProfiles);
+                } else {
+                    container.innerHTML = `<div class="error">Error: ${data.error || 'Failed to load profiles'}</div>`;
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function showSuspicious() {
+            const container = document.getElementById('profilesContainer');
+            container.innerHTML = '<div class="loading">Loading suspicious vehicles...</div>';
+            
+            try {
+                const response = await fetch('/api/v1/vehicle-profiles/suspicious/list');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentFilter = 'suspicious';
+                    displayProfiles(data.suspicious_vehicles);
+                    document.getElementById('suspiciousCount').textContent = data.total_count;
+                } else {
+                    container.innerHTML = `<div class="error">Error: ${data.error || 'Failed to load suspicious vehicles'}</div>`;
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+        
+        function updateStats(stats) {
+            document.getElementById('totalProfiles').textContent = stats.total_profiles || 0;
+            document.getElementById('totalDetections').textContent = stats.total_detections || 0;
+            document.getElementById('suspiciousCount').textContent = stats.profiles_with_anomalies || 0;
+            document.getElementById('highConfidence').textContent = stats.high_confidence_profiles || 0;
+        }
+        
+        function displayProfiles(profiles) {
+            const container = document.getElementById('profilesContainer');
+            
+            if (!profiles || profiles.length === 0) {
+                container.innerHTML = '<div class="error">No vehicle profiles found</div>';
+                return;
+            }
+            
+            const profilesHTML = profiles.map(profile => {
+                const confidenceClass = getConfidenceClass(profile.confidence_score);
+                const vehicleDesc = getVehicleDescription(profile.vehicle_attributes);
+                
+                // Create image gallery HTML
+                let imagesHTML = '';
+                if (profile.sample_images && profile.sample_images.length > 0) {
+                    const imageItems = profile.sample_images.map(img => {
+                        // Show full vehicle image if available, otherwise show plate crop
+                        if (img.image_name) {
+                            return `
+                                <div class="plate-image-container" title="${img.plate_text} - ${formatDate(img.timestamp)}">
+                                    <img src="/api/v1/vehicle-image/${img.image_name}" 
+                                         class="full-vehicle-image" 
+                                         alt="${img.plate_text}"
+                                         onclick="showFullImageModal('${img.image_name}', '${img.plate_text}', '${img.timestamp}')"
+                                         onerror="this.onerror=null; this.src='data:image/jpeg;base64,${img.image}'">
+                                    <div class="image-info">${img.plate_text}</div>
+                                </div>
+                            `;
+                        } else {
+                            return `
+                                <div class="plate-image-container" title="${img.plate_text} - ${formatDate(img.timestamp)}">
+                                    <img src="data:image/jpeg;base64,${img.image}" 
+                                         class="plate-image" 
+                                         alt="${img.plate_text}"
+                                         onclick="showImageModal('${img.image}', '${img.plate_text}', '${img.timestamp}')">
+                                    <div class="image-timestamp">${formatTime(img.timestamp)}</div>
+                                </div>
+                            `;
+                        }
+                    }).join('');
+                    
+                    imagesHTML = `
+                        <div class="image-gallery">
+                            ${imageItems}
+                        </div>
+                    `;
+                } else {
+                    imagesHTML = '<div class="no-images">No images available</div>';
+                }
+                
+                let anomaliesHTML = '';
+                if (profile.anomalies && profile.anomalies.length > 0) {
+                    anomaliesHTML = `
+                        <div class="anomaly-section">
+                            <strong>⚠️ Anomalies Detected:</strong>
+                            ${profile.anomalies.map(a => 
+                                `<div class="anomaly-item">${a.type}: ${a.details}</div>`
+                            ).join('')}
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="profile-card">
+                        <div class="profile-header">
+                            <div class="vehicle-type">${vehicleDesc}</div>
+                            <div class="confidence-badge ${confidenceClass}">
+                                ${(profile.confidence_score * 100).toFixed(0)}%
+                            </div>
+                        </div>
+                        
+                        <div class="plate-list">
+                            ${profile.plate_numbers.map(plate => 
+                                `<span class="plate-number">${plate}</span>`
+                            ).join('')}
+                        </div>
+                        
+                        ${imagesHTML}
+                        
+                        <div class="attribute-row">
+                            <span class="attribute-label">First Seen:</span>
+                            <span>${formatDate(profile.first_seen)}</span>
+                        </div>
+                        
+                        <div class="attribute-row">
+                            <span class="attribute-label">Last Seen:</span>
+                            <span>${formatDate(profile.last_seen)}</span>
+                        </div>
+                        
+                        <div class="attribute-row">
+                            <span class="attribute-label">Total Sightings:</span>
+                            <span>${profile.total_sightings}</span>
+                        </div>
+                        
+                        <div class="attribute-row">
+                            <span class="attribute-label">States Seen:</span>
+                            <span>${profile.states_seen.join(', ') || 'Unknown'}</span>
+                        </div>
+                        
+                        ${anomaliesHTML}
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = `<div class="profiles-grid">${profilesHTML}</div>`;
+        }
+        
+        function getVehicleDescription(attributes) {
+            const parts = [];
+            
+            if (attributes.color) parts.push(attributes.color);
+            if (attributes.year) parts.push(attributes.year);
+            if (attributes.make) parts.push(attributes.make);
+            if (attributes.model) parts.push(attributes.model);
+            if (attributes.type) parts.push(attributes.type);
+            
+            return parts.join(' ') || 'Unknown Vehicle';
+        }
+        
+        function getConfidenceClass(confidence) {
+            if (confidence >= 0.8) return 'confidence-high';
+            if (confidence >= 0.5) return 'confidence-medium';
+            return 'confidence-low';
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return 'Unknown';
+            const date = new Date(dateStr);
+            return date.toLocaleString();
+        }
+        
+        function formatTime(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        function showImageModal(imageBase64, plateText, timestamp) {
+            // Create modal overlay
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                cursor: pointer;
+            `;
+            
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = `
+                background: white;
+                padding: 1rem;
+                border-radius: 10px;
+                max-width: 90%;
+                max-height: 90%;
+                text-align: center;
+            `;
+            
+            modalContent.innerHTML = `
+                <h3 style="margin-bottom: 1rem;">${plateText} - ${formatDate(timestamp)}</h3>
+                <img src="data:image/jpeg;base64,${imageBase64}" 
+                     style="max-width: 100%; max-height: 70vh; border-radius: 5px;">
+            `;
+            
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+            
+            // Close modal on click
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                }
+            };
+            
+            // Prevent content click from closing
+            modalContent.onclick = (e) => {
+                e.stopPropagation();
+            };
+        }
+        
+        function showFullImageModal(imageName, plateText, timestamp) {
+            // Create modal overlay
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.9);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                cursor: pointer;
+            `;
+            
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = `
+                background: white;
+                padding: 1rem;
+                border-radius: 10px;
+                max-width: 95%;
+                max-height: 95%;
+                text-align: center;
+            `;
+            
+            modalContent.innerHTML = `
+                <h3 style="margin-bottom: 1rem; color: #2c3e50;">
+                    Vehicle: ${plateText} - ${formatDate(timestamp)}
+                </h3>
+                <img src="/api/v1/vehicle-image/${imageName}" 
+                     style="max-width: 100%; max-height: 80vh; border-radius: 5px; box-shadow: 0 5px 20px rgba(0,0,0,0.3);">
+                <div style="margin-top: 1rem; color: #6c757d;">
+                    Click anywhere outside to close
+                </div>
+            `;
+            
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+            
+            // Close modal on click
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                }
+            };
+            
+            // Prevent content click from closing
+            modalContent.onclick = (e) => {
+                e.stopPropagation();
+            };
+        }
+        
+        function refreshProfiles() {
+            currentFilter = 'all';
+            loadProfiles();
+        }
+        
+        // Load profiles on page load
+        document.addEventListener('DOMContentLoaded', loadProfiles);
+        
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            if (currentFilter === 'all') {
+                loadProfiles();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

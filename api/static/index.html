@@ -55,7 +55,7 @@
     
     .file-input-wrapper {
         position: relative;
-        display: inline-block;
+        display: block;
         margin-bottom: 1rem;
     }
     
@@ -94,7 +94,8 @@
         font-weight: 500;
         cursor: pointer;
         transition: all 0.3s ease;
-        margin-left: 1rem;
+        margin-left: 0;
+        margin-top: 1rem;
         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
     }
     
@@ -302,9 +303,7 @@
                     <label for="fileInput" class="file-input-label">
                          Choose Image
                     </label>
-                </div>
-                <div>
-                    <span id="fileName" style="margin-left: 1rem; color: #6c757d;"></span>
+                    <span id="fileName" style="display:block; margin-top:0.5rem; color: #6c757d;"></span>
                 </div>
                 <button type="submit">Analyze Plate</button>
             </form>
@@ -312,7 +311,8 @@
         
         <div class="navigation-section">
             <a href="history.html" class="nav-button">View Past Detections</a>
-            <a href="live.html" class="nav-button">Live Camera Feed</a>
+            <a href="surveillance_dashboard.html" class="nav-button">Live Camera Surveillance</a>
+            <a href="vehicle_profiles.html" class="nav-button">Vehicle Profiles</a>
         </div>
         
         <div id="results" class="result"></div>

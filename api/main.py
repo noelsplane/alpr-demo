@@ -1,5 +1,5 @@
-from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 import os
 import cv2
 import numpy as np
@@ -22,6 +22,10 @@ from platerecognizer_manager import pr_manager
 import json
 from difflib import SequenceMatcher
 from pathlib import Path
+from typing import Optional
+import asyncio
+from websocket_manager import manager
+from realtime_processor import RealtimeVideoProcessor
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -65,8 +69,9 @@ logger.info("Initialization complete!")
 # Configuration
 UPLOAD_DIR = "../data/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-PLATERECOGNIZER_TOKEN = "68f30562d40d16ba7dcfd9838dc8d5f27f4ebde7"
 
+# Global realtime processor
+realtime_processor = None
 
 # Helper functions
 def encode_image_to_base64(img_array):
@@ -468,7 +473,222 @@ def get_state_analytics():
     finally:
         db.close()
 
+
 @app.get("/api/v1/platerecognizer/usage")
 def get_api_usage():
     """Get PlateRecognizer API usage statistics."""
     return pr_manager.get_usage_report()
+
+
+@app.get("/api/v1/vehicle-profiles")
+def get_vehicle_profiles(min_confidence: float = 0.0, time_window_hours: Optional[int] = None):
+    """Get all vehicle profiles with optional filtering."""
+    from vehicle_profiles import VehicleProfileAggregator
+    
+    try:
+        aggregator = VehicleProfileAggregator()
+        aggregator.build_profiles(time_window_hours)
+        
+        profiles = aggregator.get_all_profiles(min_confidence)
+        stats = aggregator.get_summary_stats()
+        
+        return JSONResponse(content={
+            "profiles": profiles,
+            "stats": stats,
+            "generated_at": datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error generating vehicle profiles: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.get("/api/v1/vehicle-profiles/{plate_text}")
+def get_vehicle_profile_by_plate(plate_text: str):
+    """Get vehicle profile for a specific plate number."""
+    from vehicle_profiles import get_vehicle_profile
+    
+    try:
+        profile = get_vehicle_profile(plate_text)
+        
+        if profile:
+            return JSONResponse(content=profile)
+        else:
+            return JSONResponse(
+                content={"error": f"No profile found for plate: {plate_text}"}, 
+                status_code=404
+            )
+    except Exception as e:
+        logger.error(f"Error retrieving vehicle profile: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.get("/api/v1/vehicle-profiles/suspicious/list")
+def get_suspicious_vehicles():
+    """Get list of vehicles with suspicious activity or anomalies."""
+    from vehicle_profiles import VehicleProfileAggregator
+    
+    try:
+        aggregator = VehicleProfileAggregator()
+        aggregator.build_profiles()
+        
+        suspicious_profiles = aggregator.get_suspicious_profiles()
+        suspicious_data = [p.to_dict() for p in suspicious_profiles]
+        
+        return JSONResponse(content={
+            "suspicious_vehicles": suspicious_data,
+            "total_count": len(suspicious_data),
+            "generated_at": datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error finding suspicious vehicles: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.get("/api/v1/vehicle-image/{image_name}")
+async def get_vehicle_image(image_name: str):
+    """Get full vehicle image by filename."""
+    # Check both upload directories
+    upload_paths = [
+        os.path.join(UPLOAD_DIR, image_name),
+        os.path.join("../data/uploads", image_name),
+        os.path.join("data/uploads", image_name)
+    ]
+    
+    for path in upload_paths:
+        if os.path.exists(path):
+            return FileResponse(
+                path,
+                media_type="image/jpeg",
+                headers={"Cache-Control": "public, max-age=3600"}
+            )
+    
+    return JSONResponse(
+        content={"error": f"Image not found: {image_name}"}, 
+        status_code=404
+    )
+
+
+# WebSocket endpoints
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for real-time updates."""
+    await manager.connect(websocket, "general")
+    try:
+        while True:
+            # Keep connection alive and handle messages
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+
+@app.websocket("/ws/surveillance")
+async def surveillance_websocket(websocket: WebSocket):
+    """WebSocket endpoint for surveillance feed."""
+    await manager.connect(websocket, "surveillance")
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Handle commands
+            if data == "get_stats":
+                if realtime_processor:
+                    stats = realtime_processor.vehicle_tracker.get_tracking_stats()
+                    await websocket.send_json({"type": "stats", "data": stats})
+            elif data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+
+# Surveillance endpoints
+@app.post("/api/v1/surveillance/start")
+async def start_surveillance(video_source: str = "0"):
+    """Start real-time video surveillance."""
+    global realtime_processor
+    
+    if realtime_processor is None:
+        # Create processor with PlateRecognizer integration
+        realtime_processor = RealtimeVideoProcessor(
+            model, 
+            ocr, 
+            manager,
+            plate_recognizer_func=get_platerecognizer_results
+        )
+    
+    try:
+        # Convert "0" to integer for camera
+        source = int(video_source) if video_source.isdigit() else video_source
+        await realtime_processor.start_processing(source)
+        
+        return JSONResponse(content={
+            "status": "started",
+            "source": video_source,
+            "message": "Surveillance started successfully"
+        })
+    except Exception as e:
+        logger.error(f"Error starting surveillance: {e}")
+        return JSONResponse(
+            content={"error": str(e)}, 
+            status_code=500
+        )
+
+
+@app.post("/api/v1/surveillance/stop")
+async def stop_surveillance():
+    """Stop real-time video surveillance."""
+    global realtime_processor
+    
+    if realtime_processor:
+        realtime_processor.stop_processing()
+        return JSONResponse(content={
+            "status": "stopped",
+            "message": "Surveillance stopped successfully"
+        })
+    else:
+        return JSONResponse(content={
+            "status": "not_running",
+            "message": "Surveillance is not currently running"
+        })
+
+
+@app.get("/api/v1/surveillance/status")
+async def get_surveillance_status():
+    """Get current surveillance status."""
+    global realtime_processor
+    
+    if realtime_processor and realtime_processor.is_processing:
+        stats = realtime_processor.vehicle_tracker.get_tracking_stats()
+        return JSONResponse(content={
+            "status": "running",
+            "connection_stats": manager.get_connection_stats(),
+            "tracking_stats": stats,
+            "fps": realtime_processor.fps_counter.get_fps() if hasattr(realtime_processor, 'fps_counter') else 0
+        })
+    else:
+        return JSONResponse(content={
+            "status": "stopped",
+            "connection_stats": manager.get_connection_stats()
+        })
+
+
+@app.get("/api/v1/surveillance/video-feed")
+async def video_feed():
+    """Stream video feed as MJPEG."""
+    global realtime_processor
+    
+    if not realtime_processor or not realtime_processor.is_processing:
+        return JSONResponse(
+            content={"error": "Surveillance not running"}, 
+            status_code=400
+        )
+    
+    async def generate():
+        async for frame in realtime_processor.get_frame_stream():
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+    
+    return StreamingResponse(
+        generate(),
+        media_type="multipart/x-mixed-replace; boundary=frame"
+    )
