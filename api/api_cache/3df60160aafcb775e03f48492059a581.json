@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-16T13:35:50.512073",
+  "result": [
+    {
+      "plate": "bc18351",
+      "state": "AL",
+      "state_confidence": 0.34,
+      "vehicle": {
+        "type": "Unknown",
+        "type_confidence": 0.0,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 13,
+        "ymin": 16,
+        "xmax": 550,
+        "ymax": 268
+      }
+    }
+  ]
+}

@@ -94,7 +94,6 @@ class FrameProcessor:
                 logger.error(f"Error in processing loop: {e}")
     
     def _process_frame(self, frame: np.ndarray) -> List[Dict]:
-        """Process a single frame for license plates."""
         try:
             # Run YOLO detection
             results = self.model.predict(frame, conf=0.25, verbose=False)[0]
@@ -104,9 +103,78 @@ class FrameProcessor:
                 return []
             
             detections = []
+            vehicle_boxes = []
+            plate_boxes = []
             
-            for box in boxes:
+            # First pass: categorize detections
+            for i, box in enumerate(boxes):
                 x1, y1, x2, y2 = map(int, box)
+                
+                # Calculate box area and aspect ratio
+                width = x2 - x1
+                height = y2 - y1
+                area = width * height
+                aspect_ratio = width / height if height > 0 else 0
+                
+                # Heuristic: Large boxes are likely vehicles, smaller ones are plates
+                # Vehicles are typically wider and have larger area
+                if area > 50000 and aspect_ratio > 1.2:  # Adjust these thresholds as needed
+                    vehicle_boxes.append({
+                        'box': [x1, y1, x2, y2],
+                        'area': area,
+                        'confidence': float(results.boxes.conf[i].cpu().numpy()) if results.boxes.conf is not None else 0.5
+                    })
+                else:
+                    plate_boxes.append({
+                        'box': [x1, y1, x2, y2],
+                        'area': area
+                    })
+            
+            # Check for vehicles without associated plates
+            for vehicle in vehicle_boxes:
+                vx1, vy1, vx2, vy2 = vehicle['box']
+                has_plate = False
+                
+                # Check if any plate box is within this vehicle box
+                for plate in plate_boxes:
+                    px1, py1, px2, py2 = plate['box']
+                    # Check if plate center is within vehicle bounds
+                    plate_center_x = (px1 + px2) / 2
+                    plate_center_y = (py1 + py2) / 2
+                    
+                    if (vx1 <= plate_center_x <= vx2 and 
+                        vy1 <= plate_center_y <= vy2):
+                        has_plate = True
+                        break
+                
+                if not has_plate:
+                    # This is a vehicle without a visible plate
+                    # Create a special detection entry
+                    vehicle_crop = frame[vy1:vy2, vx1:vx2]
+                    
+                    # Convert crop to base64
+                    vehicle_img = Image.fromarray(cv2.cvtColor(vehicle_crop, cv2.COLOR_BGR2RGB))
+                    buffer = BytesIO()
+                    vehicle_img.save(buffer, format="JPEG", quality=85)
+                    vehicle_base64 = base64.b64encode(buffer.getvalue()).decode()
+                    
+                    detection = {
+                        'plate_text': 'NO_PLATE_DETECTED',
+                        'confidence': vehicle['confidence'],
+                        'box': vehicle['box'],
+                        'plate_image_base64': vehicle_base64,
+                        'state': None,
+                        'state_confidence': 0,
+                        'is_vehicle_without_plate': True,
+                        'vehicle_type': 'Unknown',
+                        'anomaly_type': 'NO_PLATE_VEHICLE'
+                    }
+                    
+                    detections.append(detection)
+            
+            # Process plates as before
+            for plate_box in plate_boxes:
+                x1, y1, x2, y2 = plate_box['box']
                 
                 # Add padding
                 padding = 10
@@ -182,7 +250,8 @@ class FrameProcessor:
                         'box': [x1, y1, x2, y2],
                         'plate_image_base64': plate_base64,
                         'state': state,
-                        'state_confidence': state_confidence
+                        'state_confidence': state_confidence,
+                        'is_vehicle_without_plate': False
                     }
                     
                     detections.append(detection)
@@ -192,7 +261,6 @@ class FrameProcessor:
         except Exception as e:
             logger.error(f"Error processing frame: {e}")
             return []
-
 
 class RealtimeVideoProcessor:
     """Main video processor that handles capture and streaming."""
@@ -375,6 +443,15 @@ class VehicleTracker:
         
         for detection in detections:
             plate = detection.get('plate_text', '')
+            
+            # Handle no-plate vehicles
+            if detection.get('is_vehicle_without_plate', False):
+                anomaly = self._check_for_anomalies('NO_PLATE', detection)
+                if anomaly:
+                    anomalies.append(anomaly)
+                self.stats['total_detections'] += 1
+                continue
+            
             if not plate:
                 continue
             
@@ -403,6 +480,22 @@ class VehicleTracker:
     def _check_for_anomalies(self, plate: str, detection: Dict) -> Optional[Dict]:
         """Check for various types of anomalies."""
         current_time = datetime.now()
+        
+        # Check if this is a no-plate vehicle
+        if detection.get('is_vehicle_without_plate', False):
+            return {
+                'type': 'NO_PLATE_VEHICLE',
+                'severity': 'high',
+                'plate': 'NO_PLATE',
+                'message': 'Vehicle detected without visible license plate',
+                'details': {
+                    'detection': detection,
+                    'timestamp': current_time.isoformat(),
+                    'vehicle_image': detection.get('plate_image_base64')
+                }
+            }
+        
+        # Rest of the existing anomaly checks...
         appearances = list(self.recent_vehicles[plate])
         
         # Check cooldown

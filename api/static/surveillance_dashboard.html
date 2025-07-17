@@ -121,7 +121,7 @@
         justify-content: center;
     }
     
-    #liveVideo {
+    #videoFeed {
         width: 100%;
         height: 100%;
         object-fit: contain;
@@ -205,6 +205,20 @@
     
     .alert-item.high {
         border-left-color: #ef4444;
+    }
+    .alert-item.critical {
+    border-left-color: #dc3545;
+    background: #f8d7da;
+    }
+
+    .no-plate-alert {
+        background: #dc3545;
+        color: white;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        animation: pulse 2s infinite;
     }
     
     @keyframes slideIn {
@@ -327,10 +341,15 @@
 <body>
     <div class="dashboard">
         <header class="header">
-            <a href="index.html" class="back-link">
-                ← Back to Home
-            </a>
-            <h1>🚨 REAL-TIME SURVEILLANCE</h1>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <a href="index.html" class="back-link">
+                    ← Back to Home
+                </a>
+                <a href="session_history.html" class="back-link" style="background: #b8b8b84b;">
+                    Session History
+                </a>
+            </div>
+            <h1>REAL-TIME SURVEILLANCE</h1>
             <div class="controls">
                 <div class="status-indicator">
                     <div class="status-dot inactive" id="statusDot"></div>
@@ -338,20 +357,20 @@
                 </div>
                 <span id="fpsDisplay" style="color: #10b981; margin: 0 1rem;">0.0 FPS</span>
                 <select id="videoSource">
-                    <option value="0">Camera 1</option>
-                    <option value="1">Camera 2</option>
+                    <option value="0">Default Camera</option>
                 </select>
                 <button id="startBtn" onclick="startSurveillance()">Start Surveillance</button>
                 <button id="stopBtn" onclick="stopSurveillance()" disabled>Stop</button>
+                <button onclick="resetCameraPermissions()" style="background: #ef4444;">Reset Camera</button>
             </div>
         </header>
         
         <div class="video-section">
             <div class="video-container">
-                <img id="videoFeed" style="width: 100%; height: 100%; object-fit: contain; display: none;">
+                <video id="videoFeed" style="display: none;" autoplay muted></video>
                 <canvas id="overlayCanvas" style="position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
                 <div class="no-video" id="noVideo">
-                    📹 Click "Start Surveillance" to begin monitoring
+                    Click "Start Surveillance" to begin monitoring
                 </div>
             </div>
         </div>
@@ -359,7 +378,7 @@
         <aside class="sidebar">
             <div class="sidebar-section">
                 <div class="section-header">
-                    <span>🚨 Anomaly Alerts</span>
+                    <span>Anomaly Alerts</span>
                     <span id="alertCount">0</span>
                 </div>
                 <div class="section-content" id="alertsList"></div>
@@ -367,7 +386,7 @@
             
             <div class="sidebar-section">
                 <div class="section-header">
-                    <span>🚗 Recent Detections</span>
+                    <span>Recent Detections</span>
                     <span id="detectionCount">0</span>
                 </div>
                 <div class="section-content" id="detectionsList"></div>
@@ -375,7 +394,7 @@
             
             <div class="sidebar-section">
                 <div class="section-header">
-                    <span>📊 Statistics</span>
+                    <span>Statistics</span>
                 </div>
                 <div class="section-content">
                     <div class="stats-grid">
@@ -417,8 +436,13 @@
             avgConfidence: 0
         };
         
-        const video = document.getElementById('liveVideo');
-        const noVideo = document.getElementById('noVideo');
+        // Camera handling variables
+        let localStream = null;
+        let videoElement = null;
+        let canvasElement = null;
+        let frameInterval = null;
+        let overlayCanvas = null;
+        let overlayCtx = null;
         
         function connectWebSocket() {
             ws = new WebSocket('ws://localhost:8000/ws/surveillance');
@@ -477,9 +501,17 @@
                 });
                 updateDetectionsList();
                 
+                // Draw bounding boxes
+                drawBoundingBoxes(data.detections);
+                
                 // Update stats
                 stats.totalDetections += data.detections.length;
                 updateStatsDisplay();
+            }
+            
+            // Update FPS display
+            if (data.fps) {
+                document.getElementById('fpsDisplay').textContent = data.fps.toFixed(1) + ' FPS';
             }
             
             // Handle anomalies
@@ -488,24 +520,124 @@
                     handleAnomaly(anomaly);
                 });
             }
+            
+            // Update tracking stats
+            if (data.tracking_stats) {
+                stats.totalVehicles = data.tracking_stats.total_vehicles_tracked || 0;
+                updateStatsDisplay();
+            }
+        }
+        
+        function drawBoundingBoxes(detections) {
+            if (!overlayCtx || !videoElement) return;
+            
+            // Clear previous boxes
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            
+            // Get video dimensions
+            const videoWidth = videoElement.videoWidth;
+            const videoHeight = videoElement.videoHeight;
+            
+            if (!videoWidth || !videoHeight) return;
+            
+            // Calculate scale factors
+            const scaleX = overlayCanvas.width / videoWidth;
+            const scaleY = overlayCanvas.height / videoHeight;
+            
+            detections.forEach(detection => {
+                if (detection.box && detection.box.length === 4) {
+                    const [x1, y1, x2, y2] = detection.box;
+                    
+                    // Scale coordinates
+                    const scaledX = x1 * scaleX;
+                    const scaledY = y1 * scaleY;
+                    const scaledWidth = (x2 - x1) * scaleX;
+                    const scaledHeight = (y2 - y1) * scaleY;
+                    
+                    // Set style based on confidence
+                    const confidence = detection.confidence;
+                    let strokeColor = '#10b981'; // green
+                    if (confidence < 0.5) strokeColor = '#ef4444'; // red
+                    else if (confidence < 0.8) strokeColor = '#f59e0b'; // yellow
+                    
+                    // Draw box
+                    overlayCtx.strokeStyle = strokeColor;
+                    overlayCtx.lineWidth = 2;
+                    overlayCtx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+                    
+                    // Draw label
+                    const label = `${detection.plate_text} (${(confidence * 100).toFixed(0)}%)`;
+                    overlayCtx.fillStyle = strokeColor;
+                    overlayCtx.fillRect(scaledX, scaledY - 20, label.length * 8, 20);
+                    
+                    overlayCtx.fillStyle = 'white';
+                    overlayCtx.font = '14px Arial';
+                    overlayCtx.fillText(label, scaledX + 4, scaledY - 6);
+                }
+            });
+            
+            // Clear boxes after 2 seconds
+            setTimeout(() => {
+                if (overlayCtx) {
+                    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                }
+            }, 2000);
         }
         
         function handleAnomaly(anomaly) {
-            alerts.unshift({
-                ...anomaly,
-                timestamp: new Date().toISOString()
-            });
-            if (alerts.length > 50) alerts.pop();
+    // Special handling for no-plate vehicles
+    if (anomaly.type === 'NO_PLATE_VEHICLE') {
+        // Add special visual/audio alert
+        const alertContainer = document.getElementById('alertsList');
+        const specialAlert = document.createElement('div');
+        specialAlert.className = 'no-plate-alert';
+        specialAlert.innerHTML = `
+            ⚠️ ALERT: Vehicle without license plate detected!
+            <br>Time: ${formatTime(new Date().toISOString())}
+        `;
+        alertContainer.insertBefore(specialAlert, alertContainer.firstChild);
+        
+        // Play more urgent sound
+        playUrgentAlert();
+    }
+    
+    alerts.unshift({
+        ...anomaly,
+        timestamp: new Date().toISOString()
+    });
+    if (alerts.length > 50) alerts.pop();
+    
+    stats.alertsToday++;
+    updateAlertsList();
+    updateStatsDisplay();
+    
+    // Play alert sound for high severity
+    if (anomaly.severity === 'high' || anomaly.severity === 'critical') {
+        playAlertSound();
+    }
+}
+
+function playUrgentAlert() {
+    // More urgent alert sound for no-plate vehicles
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Play 3 beeps
+    for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
             
-            stats.alertsToday++;
-            updateAlertsList();
-            updateStatsDisplay();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
             
-            // Play alert sound for high severity
-            if (anomaly.severity === 'high' || anomaly.severity === 'critical') {
-                playAlertSound();
-            }
-        }
+            oscillator.frequency.value = 1000; // Higher frequency
+            gainNode.gain.value = 0.2;
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.2);
+        }, i * 300);
+    }
+}
         
         function updateDetectionsList() {
             const container = document.getElementById('detectionsList');
@@ -518,6 +650,7 @@
                     <div class="detection-info">
                         <div class="plate-text">${detection.plate_text}</div>
                         <div class="confidence">Confidence: ${(detection.confidence * 100).toFixed(1)}%</div>
+                        ${detection.state ? `<div class="confidence">State: ${detection.state}</div>` : ''}
                     </div>
                 </div>
             `).join('');
@@ -566,69 +699,364 @@
         }
         
         async function startSurveillance() {
-            const videoSource = document.getElementById('videoSource').value;
-            
             try {
+                // First, start the backend surveillance processor
                 const response = await fetch('/api/v1/surveillance/start', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ video_source: videoSource })
+                    body: JSON.stringify({ video_source: 'browser_stream' })
                 });
                 
-                if (response.ok) {
-                    document.getElementById('startBtn').disabled = true;
-                    document.getElementById('stopBtn').disabled = false;
-                    noVideo.style.display = 'none';
-                    
-                    // Start local camera feed
-                    startLocalCamera();
-                } else {
-                    alert('Failed to start surveillance');
+                if (!response.ok) {
+                    throw new Error('Failed to start surveillance backend');
                 }
+                
+                // Now start browser camera
+                await startBrowserCamera();
+                
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                
             } catch (error) {
                 console.error('Error starting surveillance:', error);
-                alert('Error starting surveillance');
+                alert('Error starting surveillance: ' + error.message);
             }
+        }
+        
+        async function startBrowserCamera() {
+            try {
+                console.log('Starting browser camera...');
+                
+                // Get video element and create canvas
+                videoElement = document.getElementById('videoFeed');
+                overlayCanvas = document.getElementById('overlayCanvas');
+                overlayCtx = overlayCanvas.getContext('2d');
+                
+                // Create hidden canvas for frame capture
+                canvasElement = document.createElement('canvas');
+                canvasElement.width = 1280;
+                canvasElement.height = 720;
+                
+                // Always enumerate devices fresh
+                console.log('Enumerating cameras...');
+                const videoDevices = await enumerateCameras();
+                
+                if (videoDevices.length === 0) {
+                    throw new Error('No camera devices found. Please ensure a camera is connected and permissions are granted.');
+                }
+                
+                // Get selected camera
+                let videoSource = document.getElementById('videoSource').value;
+                console.log('Selected video source:', videoSource);
+                
+                // Build constraints
+                let constraints = {
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                };
+                
+                // Only add deviceId if we have a specific one
+                if (videoSource && videoSource !== '' && videoSource !== 'none') {
+                    constraints.video.deviceId = { exact: videoSource };
+                    console.log('Using specific device:', videoSource);
+                }
+                
+                console.log('Requesting getUserMedia with constraints:', constraints);
+                
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                    console.log('Got stream successfully!');
+                } catch (err) {
+                    console.error('getUserMedia failed with constraints:', err);
+                    
+                    // If specific device failed, try without deviceId
+                    if (videoSource) {
+                        console.log('Retrying without specific deviceId...');
+                        constraints = {
+                            video: {
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            },
+                            audio: false
+                        };
+                        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                        console.log('Got stream with default device!');
+                    } else {
+                        throw err;
+                    }
+                }
+                
+                console.log('Stream tracks:', localStream.getTracks().map(t => ({
+                    kind: t.kind,
+                    label: t.label,
+                    id: t.id,
+                    enabled: t.enabled,
+                    readyState: t.readyState
+                })));
+                
+                videoElement.srcObject = localStream;
+                
+                // Setup overlay canvas when video loads
+                videoElement.onloadedmetadata = () => {
+                    console.log('Video metadata loaded');
+                    overlayCanvas.width = videoElement.videoWidth;
+                    overlayCanvas.height = videoElement.videoHeight;
+                };
+                
+                // Hide the no video message
+                document.getElementById('noVideo').style.display = 'none';
+                videoElement.style.display = 'block';
+                
+                // Start sending frames to backend
+                startFrameCapture();
+                console.log('Camera started successfully!');
+                
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                console.error('Error name:', error.name);
+                console.error('Error message:', error.message);
+                console.error('Error constraint:', error.constraint);
+                
+                let errorMessage = '⚠️ Camera access error: ' + error.message;
+                
+                if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                    errorMessage = '⚠️ No camera found. Please:\n1. Connect a camera\n2. Allow camera permissions in browser\n3. Check if camera works in other apps';
+                } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    errorMessage = '⚠️ Camera access denied. Click the camera icon in the address bar to allow permissions.';
+                } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+                    errorMessage = '⚠️ Camera is being used by another application. Close other apps using the camera.';
+                } else if (error.name === 'OverconstrainedError') {
+                    errorMessage = '⚠️ Camera does not support requested settings.';
+                }
+                
+                document.getElementById('noVideo').innerHTML = errorMessage.replace(/\n/g, '<br>');
+                document.getElementById('noVideo').style.display = 'block';
+                throw error;
+            }
+        }
+        
+        async function enumerateCameras() {
+            try {
+                console.log('Enumerating cameras - requesting permissions first...');
+                
+                // First, enumerate without permissions to see what we get
+                let devices = await navigator.mediaDevices.enumerateDevices();
+                console.log('Initial enumeration:', devices);
+                
+                // Check if we have any video devices without labels (indicates no permission)
+                const unlabeledVideo = devices.filter(d => d.kind === 'videoinput' && !d.label);
+                if (unlabeledVideo.length > 0 || devices.filter(d => d.kind === 'videoinput').length === 0) {
+                    console.log('No video devices or unlabeled devices found, requesting camera permission...');
+                    
+                    try {
+                        // Request camera permission
+                        const tempStream = await navigator.mediaDevices.getUserMedia({ 
+                            video: true,
+                            audio: false 
+                        });
+                        console.log('Got camera permission, cleaning up temp stream...');
+                        tempStream.getTracks().forEach(track => {
+                            track.stop();
+                            console.log('Stopped track:', track.label);
+                        });
+                        
+                        // Re-enumerate after getting permission
+                        devices = await navigator.mediaDevices.enumerateDevices();
+                        console.log('Post-permission enumeration:', devices);
+                    } catch (permError) {
+                        console.error('Failed to get camera permission:', permError);
+                    }
+                }
+                
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                console.log('Found video devices:', videoDevices);
+                
+                const videoSelect = document.getElementById('videoSource');
+                const currentSelection = videoSelect.value;
+                
+                videoSelect.innerHTML = '';
+                
+                // Always add default option
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.text = 'Default Camera';
+                videoSelect.appendChild(defaultOption);
+                
+                if (videoDevices.length === 0) {
+                    console.warn('No video devices found!');
+                    const noDeviceOption = document.createElement('option');
+                    noDeviceOption.value = 'none';
+                    noDeviceOption.text = 'No cameras found';
+                    noDeviceOption.disabled = true;
+                    videoSelect.appendChild(noDeviceOption);
+                } else {
+                    videoDevices.forEach((device, index) => {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.text = device.label || `Camera ${index + 1} (${device.deviceId.substring(0, 8)}...)`;
+                        videoSelect.appendChild(option);
+                        console.log(`Added camera option: ${option.text}`);
+                    });
+                }
+                
+                // Try to restore previous selection if it still exists
+                if (currentSelection && currentSelection !== '0') {
+                    videoSelect.value = currentSelection;
+                }
+                
+                return videoDevices;
+                
+            } catch (error) {
+                console.error('Error enumerating cameras:', error);
+                return [];
+            }
+        }
+        
+        function startFrameCapture() {
+            if (frameInterval) {
+                clearInterval(frameInterval);
+            }
+            
+            const ctx = canvasElement.getContext('2d');
+            let frameCount = 0;
+            let lastFrameTime = Date.now();
+            let fps = 0;
+            
+            // Send frames every 500ms (2 FPS) to avoid overwhelming the backend
+            frameInterval = setInterval(async () => {
+                if (!videoElement || videoElement.paused || videoElement.ended) {
+                    return;
+                }
+                
+                frameCount++;
+                
+                // Calculate FPS
+                const currentTime = Date.now();
+                const timeDiff = currentTime - lastFrameTime;
+                if (timeDiff > 0) {
+                    fps = 1000 / timeDiff;
+                    document.getElementById('fpsDisplay').textContent = fps.toFixed(1) + ' FPS';
+                }
+                lastFrameTime = currentTime;
+                
+                try {
+                    // Draw current video frame to canvas
+                    ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+                    
+                    // Convert to blob
+                    canvasElement.toBlob(async (blob) => {
+                        if (!blob) return;
+                        
+                        // Send to backend for processing
+                        const formData = new FormData();
+                        formData.append('frame', blob, 'frame.jpg');
+                        formData.append('frame_id', frameCount.toString());
+                        
+                        try {
+                            const response = await fetch('/api/v1/surveillance/process-frame', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            
+                            if (response.ok) {
+                                const result = await response.json();
+                                // Detection results will come through WebSocket
+                            }
+                        } catch (error) {
+                            console.error('Error sending frame:', error);
+                        }
+                    }, 'image/jpeg', 0.8);
+                    
+                } catch (error) {
+                    console.error('Error capturing frame:', error);
+                }
+            }, 500); // 2 FPS
         }
         
         async function stopSurveillance() {
             try {
+                // Stop frame capture
+                if (frameInterval) {
+                    clearInterval(frameInterval);
+                    frameInterval = null;
+                }
+                
+                // Stop camera stream properly
+                if (localStream) {
+                    localStream.getTracks().forEach(track => {
+                        track.stop();
+                        // Ensure track is fully stopped
+                        track.enabled = false;
+                    });
+                    localStream = null;
+                }
+                
+                // Clear video element
+                if (videoElement) {
+                    videoElement.srcObject = null;
+                    videoElement.onloadedmetadata = null;
+                    videoElement.style.display = 'none';
+                }
+                
+                // Clear overlay
+                if (overlayCtx) {
+                    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                }
+                
+                // Show no video message
+                document.getElementById('noVideo').style.display = 'block';
+                document.getElementById('noVideo').textContent = '📹 Click "Start Surveillance" to begin monitoring';
+                
+                // Stop backend processing
                 const response = await fetch('/api/v1/surveillance/stop', {
                     method: 'POST'
                 });
                 
-                if (response.ok) {
-                    document.getElementById('startBtn').disabled = false;
-                    document.getElementById('stopBtn').disabled = true;
-                    stopLocalCamera();
-                }
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                
+                // Clear FPS display
+                document.getElementById('fpsDisplay').textContent = '0.0 FPS';
+                
+                // Reset camera selection to default
+                document.getElementById('videoSource').selectedIndex = 0;
+                
+                // Small delay to ensure resources are released
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
             } catch (error) {
                 console.error('Error stopping surveillance:', error);
             }
         }
         
-        async function startLocalCamera() {
+        async function resetCameraPermissions() {
+            console.log('Resetting camera permissions...');
+            
+            // Stop any existing streams
+            if (localStream) {
+                await stopSurveillance();
+            }
+            
+            // Clear the select
+            document.getElementById('videoSource').innerHTML = '<option value="0">Default Camera</option>';
+            
+            // Try to get fresh permissions
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { width: 1280, height: 720 } 
-                });
-                video.srcObject = stream;
-                video.style.display = 'block';
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                stream.getTracks().forEach(track => track.stop());
+                console.log('Camera permissions reset successfully');
+                
+                // Re-enumerate cameras
+                await enumerateCameras();
+                
+                alert('Camera permissions reset! Try starting surveillance again.');
             } catch (error) {
-                console.error('Error accessing camera:', error);
-                video.style.display = 'none';
-                noVideo.style.display = 'block';
-                noVideo.textContent = '⚠️ Camera access denied or unavailable';
+                console.error('Error resetting permissions:', error);
+                alert('Error accessing camera. Please check:\n1. Camera is connected\n2. No other apps are using the camera\n3. Browser has camera permissions');
             }
-        }
-        
-        function stopLocalCamera() {
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-                video.srcObject = null;
-            }
-            video.style.display = 'none';
-            noVideo.style.display = 'block';
         }
         
         function formatTime(timestamp) {
@@ -653,8 +1081,21 @@
         }
         
         // Initialize on load
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             connectWebSocket();
+            
+            // Enumerate cameras on load
+            await enumerateCameras();
+            
+            // Add camera change event listener
+            document.getElementById('videoSource').addEventListener('change', async () => {
+                // If surveillance is running, restart with new camera
+                if (localStream) {
+                    console.log('Camera changed, restarting stream...');
+                    await stopSurveillance();
+                    await startSurveillance();
+                }
+            });
             
             // Check initial status
             fetch('/api/v1/surveillance/status')
@@ -670,7 +1111,7 @@
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
             if (ws) ws.close();
-            stopLocalCamera();
+            stopSurveillance();
         });
     </script>
 </body>

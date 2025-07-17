@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-16T13:40:23.409162",
+  "result": [
+    {
+      "plate": "twc6392",
+      "state": "VA",
+      "state_confidence": 0.706,
+      "vehicle": {
+        "type": "Unknown",
+        "type_confidence": 0.106,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 12,
+        "ymin": 16,
+        "xmax": 70,
+        "ymax": 53
+      }
+    }
+  ]
+}

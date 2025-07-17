@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-16T13:36:54.086366",
+  "result": [
+    {
+      "plate": "2b64v90",
+      "state": null,
+      "state_confidence": 0,
+      "vehicle": {
+        "type": "Unknown",
+        "type_confidence": 0.0,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 1,
+        "ymin": 3,
+        "xmax": 331,
+        "ymax": 256
+      }
+    }
+  ]
+}

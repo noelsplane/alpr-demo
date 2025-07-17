@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-16T13:36:24.593037",
+  "result": [
+    {
+      "plate": "1c78n89",
+      "state": "AL",
+      "state_confidence": 0.15,
+      "vehicle": {
+        "type": "Unknown",
+        "type_confidence": 0.0,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 25,
+        "ymin": 60,
+        "xmax": 314,
+        "ymax": 215
+      }
+    }
+  ]
+}

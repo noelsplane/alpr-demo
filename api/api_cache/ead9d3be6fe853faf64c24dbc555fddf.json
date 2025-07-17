@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-16T13:40:06.074424",
+  "result": [
+    {
+      "plate": "tbz1256",
+      "state": "CA",
+      "state_confidence": 0.258,
+      "vehicle": {
+        "type": "Unknown",
+        "type_confidence": 0.0,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 3,
+        "ymin": 15,
+        "xmax": 66,
+        "ymax": 82
+      }
+    }
+  ]
+}

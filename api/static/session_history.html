@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Surveillance Session History</title>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #000000 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 2rem;
+        color: #333;
+    }
+    
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+    }
+    
+    h1 {
+        text-align: center;
+        color: #2c3e50;
+        margin-bottom: 2rem;
+        font-size: 2.5rem;
+        font-weight: 300;
+        letter-spacing: -1px;
+    }
+    
+    .controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .back-link {
+        display: inline-block;
+        padding: 12px 24px;
+        background: #667eea;
+        color: white;
+        text-decoration: none;
+        border-radius: 25px;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .back-link:hover {
+        background: #5a67d8;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .stats-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: linear-gradient(145deg, #ffffff, #f0f0f0);
+        padding: 1.5rem;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #667eea;
+        margin: 0.5rem 0;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .sessions-table {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    th {
+        background: #667eea;
+        color: white;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+    }
+    
+    td {
+        padding: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .status-active {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-completed {
+        background: #cce5ff;
+        color: #004085;
+    }
+    
+    .status-interrupted {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .view-button {
+        padding: 0.5rem 1rem;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .view-button:hover {
+        background: #5a67d8;
+        transform: translateY(-2px);
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 1000;
+        overflow-y: auto;
+    }
+    
+    .modal-content {
+        background: white;
+        margin: 2rem auto;
+        padding: 2rem;
+        border-radius: 20px;
+        max-width: 1200px;
+        width: 90%;
+        position: relative;
+        animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateY(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    
+    .close-button {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        font-size: 2rem;
+        cursor: pointer;
+        color: #6c757d;
+        background: none;
+        border: none;
+    }
+    
+    .close-button:hover {
+        color: #333;
+    }
+    
+    .session-details {
+        margin-top: 2rem;
+    }
+    
+    .detail-section {
+        margin-bottom: 2rem;
+    }
+    
+    .detail-section h3 {
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        font-size: 1.3rem;
+        font-weight: 600;
+    }
+    
+    .plate-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 1rem;
+    }
+    
+    .plate-badge {
+        background: #667eea;
+        color: white;
+        padding: 0.75rem;
+        border-radius: 10px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .detections-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .detection-item {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 0.5rem;
+        text-align: center;
+    }
+    
+    .detection-image {
+        width: 100%;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 5px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .detection-text {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 0.9rem;
+    }
+    
+    .detection-time {
+        font-size: 0.7rem;
+        color: #6c757d;
+    }
+    
+    .alert-item {
+        background: #f8d7da;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .alert-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+    
+    .alert-type {
+        font-weight: 600;
+        color: #721c24;
+    }
+    
+    .alert-time {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .no-data {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 2rem;
+        font-size: 1.2rem;
+        color: #667eea;
+    }
+    
+    .timeline-chart {
+        margin-top: 1rem;
+        height: 200px;
+        position: relative;
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+    }
+    
+    .refresh-button {
+        padding: 0.5rem 1rem;
+        background: transparent;
+        color: #667eea;
+        border: 2px solid #667eea;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .refresh-button:hover {
+        background: #667eea;
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding: 1rem;
+        }
+        
+        .modal-content {
+            width: 95%;
+            padding: 1rem;
+        }
+        
+        .detections-grid {
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        }
+    }
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1>Surveillance Session History</h1>
+        
+        <div class="controls">
+            <a href="surveillance_dashboard.html" class="back-link">← Back to Live Surveillance</a>
+            <button class="refresh-button" onclick="loadSessions()">🔄 Refresh</button>
+        </div>
+        
+        <div class="stats-summary" id="statsSummary">
+            <div class="stat-card">
+                <div class="stat-label">Total Sessions</div>
+                <div class="stat-value" id="totalSessions">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Detections</div>
+                <div class="stat-value" id="totalDetections">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Unique Vehicles</div>
+                <div class="stat-value" id="uniqueVehicles">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Alerts</div>
+                <div class="stat-value" id="totalAlerts">0</div>
+            </div>
+        </div>
+        
+        <div class="sessions-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Session ID</th>
+                        <th>Start Time</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                        <th>Detections</th>
+                        <th>Vehicles</th>
+                        <th>Alerts</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="sessionsTableBody">
+                    <tr>
+                        <td colspan="8" class="loading">Loading sessions...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Session Details Modal -->
+    <div id="sessionModal" class="modal">
+        <div class="modal-content">
+            <button class="close-button" onclick="closeModal()">&times;</button>
+            <h2 id="modalTitle">Session Details</h2>
+            
+            <div class="session-details" id="sessionDetails">
+                <!-- Details will be loaded here -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let allSessions = [];
+        
+        // Load sessions on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSessions();
+        });
+        
+        async function loadSessions() {
+            try {
+                const response = await fetch('/api/v1/surveillance/sessions');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    allSessions = data.sessions || [];
+                    updateStats();
+                    displaySessions();
+                } else {
+                    showError('Failed to load sessions');
+                }
+            } catch (error) {
+                console.error('Error loading sessions:', error);
+                showError('Error loading sessions');
+            }
+        }
+        
+        function updateStats() {
+            let totalDetections = 0;
+            let totalAlerts = 0;
+            let uniquePlates = new Set();
+            
+            allSessions.forEach(session => {
+                totalDetections += session.total_detections || 0;
+                totalAlerts += session.total_alerts || 0;
+            });
+            
+            document.getElementById('totalSessions').textContent = allSessions.length;
+            document.getElementById('totalDetections').textContent = totalDetections;
+            document.getElementById('totalAlerts').textContent = totalAlerts;
+            
+            // For unique vehicles, we'll need to load individual session details
+            // For now, show total vehicles from all sessions
+            let totalVehicles = 0;
+            allSessions.forEach(session => {
+                totalVehicles += session.total_vehicles || 0;
+            });
+            document.getElementById('uniqueVehicles').textContent = totalVehicles;
+        }
+        
+        function displaySessions() {
+            const tbody = document.getElementById('sessionsTableBody');
+            
+            if (allSessions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="no-data">No surveillance sessions found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = allSessions.map(session => {
+                const startTime = new Date(session.start_time).toLocaleString();
+                const duration = session.duration_minutes ? 
+                    `${session.duration_minutes.toFixed(1)} min` : 
+                    'In Progress';
+                
+                const statusClass = `status-${session.status}`;
+                
+                return `
+                    <tr>
+                        <td>#${session.id}</td>
+                        <td>${startTime}</td>
+                        <td>${duration}</td>
+                        <td><span class="status-badge ${statusClass}">${session.status}</span></td>
+                        <td>${session.total_detections || 0}</td>
+                        <td>${session.total_vehicles || 0}</td>
+                        <td>${session.total_alerts || 0}</td>
+                        <td>
+                            <button class="view-button" onclick="viewSession(${session.id})">
+                                View Details
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        async function viewSession(sessionId) {
+            try {
+                const response = await fetch(`/api/v1/surveillance/sessions/${sessionId}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showSessionDetails(data);
+                } else {
+                    alert('Failed to load session details');
+                }
+            } catch (error) {
+                console.error('Error loading session details:', error);
+                alert('Error loading session details');
+            }
+        }
+        
+        function showSessionDetails(data) {
+            const modal = document.getElementById('sessionModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const sessionDetails = document.getElementById('sessionDetails');
+            
+            const session = data.session;
+            const startTime = new Date(session.start_time).toLocaleString();
+            const endTime = session.end_time ? new Date(session.end_time).toLocaleString() : 'Ongoing';
+            
+            modalTitle.textContent = `Session #${session.id} Details`;
+            
+            sessionDetails.innerHTML = `
+                <div class="detail-section">
+                    <h3>Session Information</h3>
+                    <div class="stats-summary">
+                        <div class="stat-card">
+                            <div class="stat-label">Start Time</div>
+                            <div class="stat-value" style="font-size: 1rem;">${startTime}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">End Time</div>
+                            <div class="stat-value" style="font-size: 1rem;">${endTime}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Detections</div>
+                            <div class="stat-value">${session.total_detections || 0}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Alerts</div>
+                            <div class="stat-value">${session.total_alerts || 0}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <h3>Unique License Plates (${data.unique_plates.length})</h3>
+                    ${data.unique_plates.length > 0 ? 
+                        `<div class="plate-grid">
+                            ${data.unique_plates.map(plate => 
+                                `<div class="plate-badge">${plate}</div>`
+                            ).join('')}
+                        </div>` : 
+                        '<div class="no-data">No plates detected</div>'
+                    }
+                </div>
+                
+                <div class="detail-section">
+                    <h3>Detection Timeline</h3>
+                    <div class="timeline-chart" id="timeline">
+                        ${createTimeline(data.detections)}
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <h3>Recent Detections (${data.detections.length})</h3>
+                    ${data.detections.length > 0 ? 
+                        `<div class="detections-grid">
+                            ${data.detections.slice(-20).reverse().map(detection => 
+                                `<div class="detection-item">
+                                    <img src="data:image/jpeg;base64,${detection.plate_image}" 
+                                         class="detection-image" 
+                                         alt="${detection.plate_text}">
+                                    <div class="detection-text">${detection.plate_text}</div>
+                                    <div class="detection-time">${formatTime(detection.detection_time)}</div>
+                                    ${detection.state ? `<div style="font-size: 0.8rem;">State: ${detection.state}</div>` : ''}
+                                </div>`
+                            ).join('')}
+                        </div>` : 
+                        '<div class="no-data">No detections</div>'
+                    }
+                </div>
+                
+                <div class="detail-section">
+                    <h3>Alerts (${data.alerts.length})</h3>
+                    ${data.alerts.length > 0 ? 
+                        data.alerts.map(alert => 
+                            `<div class="alert-item">
+                                <div class="alert-header">
+                                    <span class="alert-type">${alert.type}</span>
+                                    <span class="alert-time">${formatTime(alert.time)}</span>
+                                </div>
+                                <div>${alert.message}</div>
+                                ${alert.plate ? `<div><strong>Plate:</strong> ${alert.plate}</div>` : ''}
+                            </div>`
+                        ).join('') : 
+                        '<div class="no-data">No alerts during this session</div>'
+                    }
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+        }
+        
+        function createTimeline(detections) {
+            if (detections.length === 0) {
+                return '<div class="no-data">No detection data for timeline</div>';
+            }
+            
+            // Group detections by minute
+            const timeGroups = {};
+            detections.forEach(d => {
+                const time = new Date(d.detection_time);
+                const minute = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                timeGroups[minute] = (timeGroups[minute] || 0) + 1;
+            });
+            
+            // Create simple bar chart
+            const maxCount = Math.max(...Object.values(timeGroups));
+            let html = '<div style="display: flex; align-items: flex-end; height: 150px; gap: 2px;">';
+            
+            Object.entries(timeGroups).forEach(([time, count]) => {
+                const height = (count / maxCount) * 100;
+                html += `
+                    <div style="flex: 1; background: #667eea; height: ${height}%; 
+                                border-radius: 4px 4px 0 0; position: relative;"
+                         title="${time}: ${count} detections">
+                        <div style="position: absolute; bottom: -20px; font-size: 0.7rem; 
+                                    transform: rotate(-45deg); white-space: nowrap;">
+                            ${time}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            return html;
+        }
+        
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString();
+        }
+        
+        function closeModal() {
+            document.getElementById('sessionModal').style.display = 'none';
+        }
+        
+        function showError(message) {
+            const tbody = document.getElementById('sessionsTableBody');
+            tbody.innerHTML = `<tr><td colspan="8" class="no-data" style="color: #dc3545;">${message}</td></tr>`;
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('sessionModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+        
+        // Auto-refresh active sessions every 30 seconds
+        setInterval(() => {
+            const hasActiveSession = allSessions.some(s => s.status === 'active');
+            if (hasActiveSession) {
+                loadSessions();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

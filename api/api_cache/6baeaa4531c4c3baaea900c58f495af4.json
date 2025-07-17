@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-16T13:40:37.805528",
+  "result": [
+    {
+      "plate": "uzr6343",
+      "state": "VA",
+      "state_confidence": 0.888,
+      "vehicle": {
+        "type": "Unknown",
+        "type_confidence": 0.0,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 15,
+        "ymin": 6,
+        "xmax": 157,
+        "ymax": 93
+      }
+    }
+  ]
+}

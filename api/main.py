@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect, Form
 from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 import os
 import cv2
@@ -12,7 +12,7 @@ from datetime import datetime
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from models import Base, PlateDetection
+from models import Base, PlateDetection, SurveillanceSession, SessionDetection, SessionAlert
 from state_model import get_state_classifier
 from plate_filter_utils import extract_plate_number, detect_state_from_context
 import logging
@@ -22,7 +22,7 @@ from platerecognizer_manager import pr_manager
 import json
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 import asyncio
 from websocket_manager import manager
 from realtime_processor import RealtimeVideoProcessor
@@ -70,8 +70,9 @@ logger.info("Initialization complete!")
 UPLOAD_DIR = "../data/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Global realtime processor
+# Global realtime processor and session tracking
 realtime_processor = None
+current_session_id = None
 
 # Helper functions
 def encode_image_to_base64(img_array):
@@ -603,9 +604,32 @@ async def surveillance_websocket(websocket: WebSocket):
 
 # Surveillance endpoints
 @app.post("/api/v1/surveillance/start")
-async def start_surveillance(video_source: str = "0"):
+async def start_surveillance(request: dict = None):
     """Start real-time video surveillance."""
-    global realtime_processor
+    global realtime_processor, current_session_id
+    
+    if request is None:
+        request = {}
+    
+    video_source = request.get('video_source', '0')
+    
+    # Create new surveillance session
+    db = get_db()
+    try:
+        session = SurveillanceSession(
+            start_time=datetime.now(),
+            status='active'
+        )
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+        current_session_id = session.id
+        logger.info(f"Started surveillance session {current_session_id}")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating session: {e}")
+    finally:
+        db.close()
     
     if realtime_processor is None:
         # Create processor with PlateRecognizer integration
@@ -617,13 +641,24 @@ async def start_surveillance(video_source: str = "0"):
         )
     
     try:
-        # Convert "0" to integer for camera
-        source = int(video_source) if video_source.isdigit() else video_source
-        await realtime_processor.start_processing(source)
+        # For browser stream, we don't start camera capture
+        if video_source == "browser_stream":
+            realtime_processor.is_processing = True
+            realtime_processor.frame_processor.start()
+            
+            # Start the async processing loop without capture
+            asyncio.create_task(realtime_processor._async_processing_loop())
+            
+            logger.info("Started browser-based surveillance processing")
+        else:
+            # Original camera-based processing
+            source = int(video_source) if video_source.isdigit() else video_source
+            await realtime_processor.start_processing(source)
         
         return JSONResponse(content={
             "status": "started",
             "source": video_source,
+            "session_id": current_session_id,
             "message": "Surveillance started successfully"
         })
     except Exception as e:
@@ -637,10 +672,49 @@ async def start_surveillance(video_source: str = "0"):
 @app.post("/api/v1/surveillance/stop")
 async def stop_surveillance():
     """Stop real-time video surveillance."""
-    global realtime_processor
+    global realtime_processor, current_session_id
     
     if realtime_processor:
         realtime_processor.stop_processing()
+        
+        # Update session status
+        if current_session_id:
+            db = get_db()
+            try:
+                session = db.query(SurveillanceSession).filter(
+                    SurveillanceSession.id == current_session_id
+                ).first()
+                
+                if session:
+                    session.end_time = datetime.now()
+                    session.status = 'completed'
+                    
+                    # Get session stats
+                    detection_count = db.query(SessionDetection).filter(
+                        SessionDetection.session_id == current_session_id
+                    ).count()
+                    
+                    unique_plates = db.query(SessionDetection.plate_text).filter(
+                        SessionDetection.session_id == current_session_id
+                    ).distinct().count()
+                    
+                    alert_count = db.query(SessionAlert).filter(
+                        SessionAlert.session_id == current_session_id
+                    ).count()
+                    
+                    session.total_detections = detection_count
+                    session.total_vehicles = unique_plates
+                    session.total_alerts = alert_count
+                    
+                    db.commit()
+                    logger.info(f"Completed surveillance session {current_session_id}")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Error updating session: {e}")
+            finally:
+                db.close()
+                current_session_id = None
+        
         return JSONResponse(content={
             "status": "stopped",
             "message": "Surveillance stopped successfully"
@@ -692,3 +766,216 @@ async def video_feed():
         generate(),
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
+
+
+@app.post("/api/v1/surveillance/process-frame")
+async def process_browser_frame(
+    frame: UploadFile = File(...),
+    frame_id: str = Form(...)
+):
+    """Process a frame sent from the browser."""
+    global realtime_processor, current_session_id
+    
+    if not realtime_processor or not realtime_processor.is_processing:
+        return JSONResponse(
+            content={"error": "Surveillance not running"}, 
+            status_code=400
+        )
+    
+    try:
+        # Read the frame data
+        frame_data = await frame.read()
+        nparr = np.frombuffer(frame_data, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            return JSONResponse(
+                content={"error": "Invalid image data"}, 
+                status_code=400
+            )
+        
+        # Process the frame directly
+        detections = realtime_processor.frame_processor._process_frame(img)
+        
+        if detections and current_session_id:
+            # Save detections to database
+            db = get_db()
+            try:
+                for detection in detections:
+                    session_detection = SessionDetection(
+                        session_id=current_session_id,
+                        plate_text=detection.get('plate_text'),
+                        confidence=detection.get('confidence', 0),
+                        state=detection.get('state'),
+                        state_confidence=detection.get('state_confidence', 0),
+                        frame_id=frame_id,
+                        plate_image_base64=detection.get('plate_image_base64'),
+                        detection_time=datetime.now()
+                    )
+                    db.add(session_detection)
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Error saving session detections: {e}")
+            finally:
+                db.close()
+        
+        if detections:
+            # Track vehicles and detect anomalies
+            anomalies = realtime_processor.vehicle_tracker.process_detections(detections)
+            
+            # Save alerts to database
+            if anomalies and current_session_id:
+                db = get_db()
+                try:
+                    for anomaly in anomalies:
+                        alert = SessionAlert(
+                            session_id=current_session_id,
+                            alert_type=anomaly.get('type'),
+                            severity=anomaly.get('severity'),
+                            plate_text=anomaly.get('plate'),
+                            message=anomaly.get('message'),
+                            details=json.dumps(anomaly.get('details', {})),
+                            alert_time=datetime.now()
+                        )
+                        db.add(alert)
+                    db.commit()
+                except Exception as e:
+                    db.rollback()
+                    logger.error(f"Error saving alerts: {e}")
+                finally:
+                    db.close()
+            
+            # Send updates via WebSocket
+            await manager.send_detection_update({
+                'detections': detections,
+                'anomalies': anomalies,
+                'frame_id': frame_id,
+                'tracking_stats': realtime_processor.vehicle_tracker.get_tracking_stats()
+            })
+            
+            # Send alerts for high-severity anomalies
+            for anomaly in anomalies:
+                if anomaly.get('severity') in ['high', 'critical']:
+                    await manager.send_anomaly_alert(anomaly)
+        
+        return JSONResponse(content={
+            "status": "processed",
+            "frame_id": frame_id,
+            "detections": detections,
+            "detection_count": len(detections)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error processing browser frame: {e}")
+        return JSONResponse(
+            content={"error": str(e)}, 
+            status_code=500
+        )
+
+
+@app.get("/api/v1/surveillance/sessions")
+def get_surveillance_sessions(limit: int = 50):
+    """Get list of surveillance sessions."""
+    db = get_db()
+    try:
+        sessions = db.query(SurveillanceSession).order_by(
+            SurveillanceSession.start_time.desc()
+        ).limit(limit).all()
+        
+        session_list = []
+        for session in sessions:
+            session_dict = {
+                'id': session.id,
+                'start_time': session.start_time.isoformat(),
+                'end_time': session.end_time.isoformat() if session.end_time else None,
+                'status': session.status,
+                'duration_minutes': None,
+                'total_detections': session.total_detections,
+                'total_vehicles': session.total_vehicles,
+                'total_alerts': session.total_alerts
+            }
+            
+            if session.end_time and session.start_time:
+                duration = session.end_time - session.start_time
+                session_dict['duration_minutes'] = round(duration.total_seconds() / 60, 1)
+            
+            session_list.append(session_dict)
+        
+        return JSONResponse(content={'sessions': session_list})
+    except Exception as e:
+        logger.error(f"Error fetching sessions: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    finally:
+        db.close()
+
+
+@app.get("/api/v1/surveillance/sessions/{session_id}")
+def get_session_details(session_id: int):
+    """Get detailed information about a specific surveillance session."""
+    db = get_db()
+    try:
+        session = db.query(SurveillanceSession).filter(
+            SurveillanceSession.id == session_id
+        ).first()
+        
+        if not session:
+            return JSONResponse(content={"error": "Session not found"}, status_code=404)
+        
+        # Get all detections
+        detections = db.query(SessionDetection).filter(
+            SessionDetection.session_id == session_id
+        ).order_by(SessionDetection.detection_time).all()
+        
+        # Get all alerts
+        alerts = db.query(SessionAlert).filter(
+            SessionAlert.session_id == session_id
+        ).order_by(SessionAlert.alert_time).all()
+        
+        # Get unique plates
+        unique_plates = db.query(SessionDetection.plate_text).filter(
+            SessionDetection.session_id == session_id
+        ).distinct().all()
+        
+        session_data = {
+            'session': {
+                'id': session.id,
+                'start_time': session.start_time.isoformat(),
+                'end_time': session.end_time.isoformat() if session.end_time else None,
+                'status': session.status,
+                'total_detections': session.total_detections,
+                'total_vehicles': session.total_vehicles,
+                'total_alerts': session.total_alerts
+            },
+            'unique_plates': [p[0] for p in unique_plates if p[0]],
+            'detections': [{
+                'id': d.id,
+                'plate_text': d.plate_text,
+                'confidence': d.confidence,
+                'state': d.state,
+                'state_confidence': d.state_confidence,
+                'detection_time': d.detection_time.isoformat(),
+                'plate_image': d.plate_image_base64
+            } for d in detections],
+            'alerts': [{
+                'id': a.id,
+                'type': a.alert_type,
+                'severity': a.severity,
+                'plate': a.plate_text,
+                'message': a.message,
+                'time': a.alert_time.isoformat()
+            } for a in alerts]
+        }
+        
+        return JSONResponse(content=session_data)
+    except Exception as e:
+        logger.error(f"Error fetching session details: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    finally:
+        db.close()
+
+
+@app.get("/api/v1/test-camera")
+async def test_camera():
+    """Simple endpoint to test camera availability."""
+    return FileResponse("static/camera_test.html")

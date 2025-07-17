@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-16T13:40:24.833733",
+  "result": [
+    {
+      "plate": "tvc6392",
+      "state": "NY",
+      "state_confidence": 0.095,
+      "vehicle": {
+        "type": "Unknown",
+        "type_confidence": 0.0,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 6,
+        "ymin": 10,
+        "xmax": 134,
+        "ymax": 76
+      }
+    }
+  ]
+}

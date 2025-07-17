@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-16T13:40:01.863390",
+  "result": [
+    {
+      "plate": "8258",
+      "state": "AZ",
+      "state_confidence": 0.159,
+      "vehicle": {
+        "type": "Unknown",
+        "type_confidence": 0.0,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 8,
+        "ymin": 12,
+        "xmax": 160,
+        "ymax": 95
+      }
+    }
+  ]
+}
