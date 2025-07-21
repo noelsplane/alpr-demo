@@ -584,26 +584,44 @@
             }, 2000);
         }
         
-        function handleAnomaly(anomaly) {
+function handleAnomaly(anomaly) {
     // Special handling for no-plate vehicles
-    if (anomaly.type === 'NO_PLATE_VEHICLE') {
+    if (anomaly.type === 'NO_PLATE_VEHICLE' || anomaly.type === 'SUSPICIOUS_NO_PLATE') {
         // Add special visual/audio alert
         const alertContainer = document.getElementById('alertsList');
         const specialAlert = document.createElement('div');
         specialAlert.className = 'no-plate-alert';
         specialAlert.innerHTML = `
-            ⚠️ ALERT: Vehicle without license plate detected!
-            <br>Time: ${formatTime(new Date().toISOString())}
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="font-size: 2rem;">⚠️</div>
+                <div>
+                    <div style="font-weight: bold; font-size: 1.1rem;">VEHICLE WITHOUT LICENSE PLATE</div>
+                    <div>Time: ${formatTime(anomaly.timestamp || new Date().toISOString())}</div>
+                    ${anomaly.details && anomaly.details.vehicle_attributes ? 
+                        `<div>Vehicle: ${getVehicleDescription(anomaly.details.vehicle_attributes)}</div>` : ''}
+                </div>
+            </div>
         `;
         alertContainer.insertBefore(specialAlert, alertContainer.firstChild);
         
         // Play more urgent sound
         playUrgentAlert();
+        
+        // Flash the screen
+        flashScreen();
+        
+        // Remove the special alert after 30 seconds
+        setTimeout(() => {
+            specialAlert.style.transition = 'opacity 1s';
+            specialAlert.style.opacity = '0';
+            setTimeout(() => specialAlert.remove(), 1000);
+        }, 30000);
     }
     
+    // Continue with normal anomaly handling
     alerts.unshift({
         ...anomaly,
-        timestamp: new Date().toISOString()
+        timestamp: anomaly.timestamp || new Date().toISOString()
     });
     if (alerts.length > 50) alerts.pop();
     
@@ -616,6 +634,153 @@
         playAlertSound();
     }
 }
+
+function getVehicleDescription(attributes) {
+    const parts = [];
+    if (attributes.color) parts.push(attributes.color);
+    if (attributes.year) parts.push(attributes.year);
+    if (attributes.make) parts.push(attributes.make);
+    if (attributes.model) parts.push(attributes.model);
+    if (attributes.type) parts.push(`(${attributes.type})`);
+    
+    return parts.join(' ') || 'Unknown Vehicle';
+}
+
+function flashScreen() {
+    const flash = document.createElement('div');
+    flash.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 0, 0, 0.3);
+        z-index: 9999;
+        pointer-events: none;
+        animation: flash 0.5s ease-in-out;
+    `;
+    
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes flash {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+    document.body.appendChild(flash);
+    
+    setTimeout(() => {
+        flash.remove();
+        style.remove();
+    }, 500);
+}
+
+function playUrgentAlert() {
+    // More urgent alert sound for no-plate vehicles
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Play 3 beeps with increasing frequency
+    for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800 + (i * 200); // Increasing frequency
+            gainNode.gain.value = 0.3;
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.2);
+        }, i * 300);
+    }
+}
+
+// Add a new section for no-plate vehicles in the stats
+function updateStatsDisplay() {
+    document.getElementById('totalVehicles').textContent = stats.totalVehicles;
+    document.getElementById('totalDetections').textContent = stats.totalDetections;
+    document.getElementById('alertsToday').textContent = stats.alertsToday;
+    
+    // Count no-plate alerts
+    const noPlateCount = alerts.filter(a => 
+        a.type === 'NO_PLATE_VEHICLE' || a.type === 'SUSPICIOUS_NO_PLATE'
+    ).length;
+    
+    // Update or create no-plate stat
+    let noPlateStatEl = document.getElementById('noPlateVehicles');
+    if (!noPlateStatEl) {
+        // Create new stat element
+        const statsGrid = document.querySelector('.stats-grid');
+        const statItem = document.createElement('div');
+        statItem.className = 'stat-item';
+        statItem.innerHTML = `
+            <div class="stat-value" id="noPlateVehicles" style="color: #ef4444;">${noPlateCount}</div>
+            <div class="stat-label">No-Plate Vehicles</div>
+        `;
+        statsGrid.appendChild(statItem);
+    } else {
+        noPlateStatEl.textContent = noPlateCount;
+    }
+    
+    if (detections.length > 0) {
+        const avgConf = detections.reduce((sum, d) => sum + d.confidence, 0) / detections.length;
+        document.getElementById('avgConfidence').textContent = (avgConf * 100).toFixed(0) + '%';
+    }
+}
+
+// Add CSS for the new alert styles
+const additionalStyles = `
+    <style>
+    .no-plate-alert {
+        background: #dc3545;
+        color: white;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        animation: pulse 2s infinite, slideIn 0.5s ease;
+        box-shadow: 0 4px 20px rgba(220, 53, 69, 0.5);
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+        100% { transform: scale(1); }
+    }
+    
+    .detection-item.no-plate {
+        border: 2px solid #ef4444;
+        background: rgba(239, 68, 68, 0.1);
+    }
+    
+    .vehicle-box {
+        position: absolute;
+        border: 2px solid #f59e0b;
+        background: rgba(245, 158, 11, 0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .vehicle-label {
+        position: absolute;
+        top: -25px;
+        left: 0;
+        background: #f59e0b;
+        color: #000;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    </style>
+`;
+
+// Add the styles to the document
+document.head.insertAdjacentHTML('beforeend', additionalStyles);
 
 function playUrgentAlert() {
     // More urgent alert sound for no-plate vehicles

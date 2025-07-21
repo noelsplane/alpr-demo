@@ -8,11 +8,20 @@ import easyocr
 import base64
 from io import BytesIO
 from PIL import Image, ImageEnhance
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func, and_, or_
 from sqlalchemy.orm import sessionmaker
-from models import Base, PlateDetection, SurveillanceSession, SessionDetection, SessionAlert
+from models import (
+    Base,
+    PlateDetection,
+    SurveillanceSession,
+    SessionDetection,
+    SessionAlert,
+    VehicleTrack,
+    TrackPlateAssociation,
+    VehicleAnomaly
+)
 from state_model import get_state_classifier
 from plate_filter_utils import extract_plate_number, detect_state_from_context
 import logging
@@ -979,3 +988,299 @@ def get_session_details(session_id: int):
 async def test_camera():
     """Simple endpoint to test camera availability."""
     return FileResponse("static/camera_test.html")
+
+
+# Add these endpoints to main.py:
+
+@app.get("/api/v1/anomalies/no-plate-vehicles")
+def get_no_plate_vehicles(time_window_hours: Optional[int] = 24):
+    """Get all vehicles detected without license plates."""
+    db = get_db()
+    try:
+        query = db.query(VehicleAnomaly).filter(
+            VehicleAnomaly.anomaly_type.in_(['NO_PLATE_VEHICLE', 'SUSPICIOUS_NO_PLATE'])
+        ).order_by(VehicleAnomaly.detected_time.desc())
+        
+        if time_window_hours:
+            cutoff_time = datetime.now() - timedelta(hours=time_window_hours)
+            query = query.filter(VehicleAnomaly.detected_time >= cutoff_time)
+        
+        anomalies = query.all()
+        
+        # Group by track_id
+        vehicles = {}
+        for anomaly in anomalies:
+            track_id = anomaly.track_id
+            if track_id not in vehicles:
+                # Get track details
+                track = db.query(VehicleTrack).filter(
+                    VehicleTrack.track_id == track_id
+                ).first()
+                
+                vehicles[track_id] = {
+                    'track_id': track_id,
+                    'first_seen': track.first_seen.isoformat() if track else None,
+                    'last_seen': track.last_seen.isoformat() if track else None,
+                    'vehicle_description': '',
+                    'total_appearances': track.total_appearances if track else 0,
+                    'anomalies': []
+                }
+                
+                if track:
+                    desc_parts = []
+                    if track.vehicle_color:
+                        desc_parts.append(track.vehicle_color)
+                    if track.vehicle_year:
+                        desc_parts.append(track.vehicle_year)
+                    if track.vehicle_make:
+                        desc_parts.append(track.vehicle_make)
+                    if track.vehicle_model:
+                        desc_parts.append(track.vehicle_model)
+                    if track.vehicle_type:
+                        desc_parts.append(f"({track.vehicle_type})")
+                    
+                    vehicles[track_id]['vehicle_description'] = ' '.join(desc_parts)
+            
+            vehicles[track_id]['anomalies'].append({
+                'id': anomaly.id,
+                'type': anomaly.anomaly_type,
+                'severity': anomaly.severity,
+                'detected_time': anomaly.detected_time.isoformat(),
+                'message': anomaly.message,
+                'image': anomaly.image_data
+            })
+        
+        return JSONResponse(content={
+            'no_plate_vehicles': list(vehicles.values()),
+            'total_count': len(vehicles),
+            'time_window_hours': time_window_hours,
+            'generated_at': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error fetching no-plate vehicles: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    finally:
+        db.close()
+
+
+@app.get("/api/v1/anomalies/all")
+def get_all_anomalies(
+    time_window_hours: Optional[int] = 24,
+    severity: Optional[str] = None,
+    anomaly_type: Optional[str] = None
+):
+    """Get all detected anomalies with filtering options."""
+    db = get_db()
+    try:
+        query = db.query(VehicleAnomaly).order_by(VehicleAnomaly.detected_time.desc())
+        
+        if time_window_hours:
+            cutoff_time = datetime.now() - timedelta(hours=time_window_hours)
+            query = query.filter(VehicleAnomaly.detected_time >= cutoff_time)
+        
+        if severity:
+            query = query.filter(VehicleAnomaly.severity == severity)
+        
+        if anomaly_type:
+            query = query.filter(VehicleAnomaly.anomaly_type == anomaly_type)
+        
+        anomalies = query.limit(200).all()
+        
+        # Format results
+        results = []
+        for anomaly in anomalies:
+            # Get associated track info
+            track = db.query(VehicleTrack).filter(
+                VehicleTrack.track_id == anomaly.track_id
+            ).first()
+            
+            results.append({
+                'id': anomaly.id,
+                'track_id': anomaly.track_id,
+                'type': anomaly.anomaly_type,
+                'severity': anomaly.severity,
+                'detected_time': anomaly.detected_time.isoformat(),
+                'plate_text': anomaly.plate_text,
+                'message': anomaly.message,
+                'vehicle_info': {
+                    'type': track.vehicle_type if track else None,
+                    'make': track.vehicle_make if track else None,
+                    'model': track.vehicle_model if track else None,
+                    'color': track.vehicle_color if track else None,
+                    'year': track.vehicle_year if track else None
+                } if track else None,
+                'image': anomaly.image_data
+            })
+        
+        # Get summary statistics
+        summary = {
+            'total_anomalies': len(results),
+            'by_type': {},
+            'by_severity': {}
+        }
+        
+        for anomaly in results:
+            atype = anomaly['type']
+            severity = anomaly['severity']
+            
+            summary['by_type'][atype] = summary['by_type'].get(atype, 0) + 1
+            summary['by_severity'][severity] = summary['by_severity'].get(severity, 0) + 1
+        
+        return JSONResponse(content={
+            'anomalies': results,
+            'summary': summary,
+            'filters': {
+                'time_window_hours': time_window_hours,
+                'severity': severity,
+                'anomaly_type': anomaly_type
+            },
+            'generated_at': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error fetching anomalies: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    finally:
+        db.close()
+
+
+@app.get("/api/v1/anomalies/vehicle-tracks/{track_id}")
+def get_vehicle_track_details(track_id: str):
+    """Get detailed information about a specific vehicle track."""
+    db = get_db()
+    try:
+        # Get track info
+        track = db.query(VehicleTrack).filter(
+            VehicleTrack.track_id == track_id
+        ).first()
+        
+        if not track:
+            return JSONResponse(content={"error": "Track not found"}, status_code=404)
+        
+        # Get all plates associated with this track
+        plates = db.query(TrackPlateAssociation).filter(
+            TrackPlateAssociation.track_id == track_id
+        ).all()
+        
+        # Get all anomalies for this track
+        anomalies = db.query(VehicleAnomaly).filter(
+            VehicleAnomaly.track_id == track_id
+        ).order_by(VehicleAnomaly.detected_time).all()
+        
+        # Get recent detections
+        recent_detections = []
+        for plate_assoc in plates:
+            detections = db.query(PlateDetection).filter(
+                PlateDetection.plate_text == plate_assoc.plate_text
+            ).order_by(PlateDetection.timestamp.desc()).limit(10).all()
+            
+            for detection in detections:
+                recent_detections.append({
+                    'plate_text': detection.plate_text,
+                    'timestamp': detection.timestamp.isoformat(),
+                    'confidence': detection.confidence,
+                    'state': detection.state,
+                    'image_name': detection.image_name
+                })
+        
+        # Sort recent detections by timestamp
+        recent_detections.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        result = {
+            'track_id': track_id,
+            'vehicle_info': {
+                'type': track.vehicle_type,
+                'make': track.vehicle_make,
+                'model': track.vehicle_model,
+                'color': track.vehicle_color,
+                'year': track.vehicle_year,
+                'type_confidence': track.type_confidence,
+                'make_confidence': track.make_confidence,
+                'model_confidence': track.model_confidence,
+                'color_confidence': track.color_confidence,
+                'year_confidence': track.year_confidence
+            },
+            'tracking_info': {
+                'first_seen': track.first_seen.isoformat(),
+                'last_seen': track.last_seen.isoformat(),
+                'total_appearances': track.total_appearances,
+                'is_suspicious': track.is_suspicious,
+                'has_no_plate': track.has_no_plate,
+                'anomaly_count': track.anomaly_count
+            },
+            'associated_plates': [
+                {
+                    'plate_text': p.plate_text,
+                    'first_seen': p.first_seen.isoformat(),
+                    'last_seen': p.last_seen.isoformat(),
+                    'appearance_count': p.appearance_count
+                } for p in plates
+            ],
+            'anomalies': [
+                {
+                    'id': a.id,
+                    'type': a.anomaly_type,
+                    'severity': a.severity,
+                    'detected_time': a.detected_time.isoformat(),
+                    'message': a.message,
+                    'plate_text': a.plate_text
+                } for a in anomalies
+            ],
+            'recent_detections': recent_detections[:20]
+        }
+        
+        return JSONResponse(content=result)
+    except Exception as e:
+        logger.error(f"Error fetching track details: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    finally:
+        db.close()
+
+
+@app.post("/api/v1/anomalies/report")
+async def generate_anomaly_report(
+    time_window_hours: int = 24,
+    include_images: bool = False
+):
+    """Generate a comprehensive anomaly report."""
+    try:
+        # Get the current anomaly detector instance
+        if not realtime_processor or not hasattr(realtime_processor, 'anomaly_detector'):
+            return JSONResponse(
+                content={"error": "Anomaly detector not initialized"}, 
+                status_code=400
+            )
+        
+        report = realtime_processor.anomaly_detector.export_suspicious_vehicles_report()
+        
+        # Add database statistics
+        db = get_db()
+        try:
+            cutoff_time = datetime.now() - timedelta(hours=time_window_hours)
+            
+            # Count anomalies by type
+            anomaly_counts = db.query(
+                VehicleAnomaly.anomaly_type,
+                func.count(VehicleAnomaly.id).label('count')
+            ).filter(
+                VehicleAnomaly.detected_time >= cutoff_time
+            ).group_by(VehicleAnomaly.anomaly_type).all()
+            
+            report['database_stats'] = {
+                'time_window_hours': time_window_hours,
+                'anomaly_counts': {ac[0]: ac[1] for ac in anomaly_counts}
+            }
+            
+            if not include_images:
+                # Remove image data to reduce response size
+                for category in ['no_plate_vehicles', 'plate_switchers', 'loiterers', 'all_anomalies']:
+                    if category in report:
+                        for item in report[category]:
+                            if 'details' in item and 'image' in item['details']:
+                                del item['details']['image']
+        finally:
+            db.close()
+        
+        return JSONResponse(content=report)
+    except Exception as e:
+        logger.error(f"Error generating anomaly report: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)

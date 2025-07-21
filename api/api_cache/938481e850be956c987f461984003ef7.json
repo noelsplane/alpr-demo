@@ -1,0 +1,51 @@
+{
+  "timestamp": "2025-07-17T10:51:37.367902",
+  "result": [
+    {
+      "plate": "gvt567",
+      "state": "NY",
+      "state_confidence": 0.553,
+      "vehicle": {
+        "type": "SUV",
+        "type_confidence": 0.902,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 419,
+        "ymin": 777,
+        "xmax": 515,
+        "ymax": 839
+      }
+    },
+    {
+      "plate": "hrc1638",
+      "state": "NY",
+      "state_confidence": 0.837,
+      "vehicle": {
+        "type": "Sedan",
+        "type_confidence": 0.738,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 86,
+        "ymin": 731,
+        "xmax": 137,
+        "ymax": 754
+      }
+    }
+  ]
+}

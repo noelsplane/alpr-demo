@@ -1,8 +1,5 @@
-"""
-Real-time video processing for surveillance and anomaly detection.
-Fixed implementation with proper threading and frame streaming.
-"""
 
+import os
 import asyncio
 import cv2
 import numpy as np
@@ -17,6 +14,7 @@ import threading
 import queue
 import time
 import json
+from anomaly_detector import EnhancedAnomalyDetector  
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +104,7 @@ class FrameProcessor:
             vehicle_boxes = []
             plate_boxes = []
             
-            # First pass: categorize detections
+            # First pass: categorize detections by size and aspect ratio
             for i, box in enumerate(boxes):
                 x1, y1, x2, y2 = map(int, box)
                 
@@ -116,24 +114,29 @@ class FrameProcessor:
                 area = width * height
                 aspect_ratio = width / height if height > 0 else 0
                 
+                # Get confidence
+                conf = float(results.boxes.conf[i].cpu().numpy()) if results.boxes.conf is not None else 0.5
+                
                 # Heuristic: Large boxes are likely vehicles, smaller ones are plates
                 # Vehicles are typically wider and have larger area
-                if area > 50000 and aspect_ratio > 1.2:  # Adjust these thresholds as needed
+                if area > 50000 and aspect_ratio > 1.2:  # Adjust thresholds as needed
                     vehicle_boxes.append({
                         'box': [x1, y1, x2, y2],
                         'area': area,
-                        'confidence': float(results.boxes.conf[i].cpu().numpy()) if results.boxes.conf is not None else 0.5
+                        'confidence': conf
                     })
                 else:
                     plate_boxes.append({
                         'box': [x1, y1, x2, y2],
-                        'area': area
+                        'area': area,
+                        'confidence': conf
                     })
             
-            # Check for vehicles without associated plates
+            # Process vehicles and check for associated plates
             for vehicle in vehicle_boxes:
                 vx1, vy1, vx2, vy2 = vehicle['box']
                 has_plate = False
+                associated_plate = None
                 
                 # Check if any plate box is within this vehicle box
                 for plate in plate_boxes:
@@ -145,12 +148,39 @@ class FrameProcessor:
                     if (vx1 <= plate_center_x <= vx2 and 
                         vy1 <= plate_center_y <= vy2):
                         has_plate = True
+                        associated_plate = plate
                         break
                 
                 if not has_plate:
                     # This is a vehicle without a visible plate
-                    # Create a special detection entry
                     vehicle_crop = frame[vy1:vy2, vx1:vx2]
+                    
+                    # Try to get vehicle attributes using PlateRecognizer
+                    vehicle_attrs = {}
+                    if self.plate_recognizer_func:
+                        try:
+                            temp_path = f"/tmp/vehicle_{datetime.now().timestamp()}.jpg"
+                            cv2.imwrite(temp_path, vehicle_crop)
+                            
+                            pr_results = self.plate_recognizer_func(temp_path)
+                            if pr_results and len(pr_results) > 0:
+                                vehicle_info = pr_results[0].get('vehicle', {})
+                                vehicle_attrs = {
+                                    'vehicle_type': vehicle_info.get('type'),
+                                    'vehicle_type_confidence': vehicle_info.get('type_confidence', 0),
+                                    'vehicle_make': vehicle_info.get('make'),
+                                    'vehicle_make_confidence': vehicle_info.get('make_confidence', 0),
+                                    'vehicle_model': vehicle_info.get('model'),
+                                    'vehicle_model_confidence': vehicle_info.get('model_confidence', 0),
+                                    'vehicle_color': vehicle_info.get('color'),
+                                    'vehicle_color_confidence': vehicle_info.get('color_confidence', 0),
+                                    'vehicle_year': vehicle_info.get('year'),
+                                    'vehicle_year_confidence': vehicle_info.get('year_confidence', 0)
+                                }
+                            
+                            os.remove(temp_path)
+                        except Exception as e:
+                            logger.error(f"Error getting vehicle attributes: {e}")
                     
                     # Convert crop to base64
                     vehicle_img = Image.fromarray(cv2.cvtColor(vehicle_crop, cv2.COLOR_BGR2RGB))
@@ -160,107 +190,172 @@ class FrameProcessor:
                     
                     detection = {
                         'plate_text': 'NO_PLATE_DETECTED',
-                        'confidence': vehicle['confidence'],
+                        'confidence': 0.0,
                         'box': vehicle['box'],
                         'plate_image_base64': vehicle_base64,
                         'state': None,
                         'state_confidence': 0,
                         'is_vehicle_without_plate': True,
-                        'vehicle_type': 'Unknown',
-                        'anomaly_type': 'NO_PLATE_VEHICLE'
+                        'anomaly_type': 'NO_PLATE_VEHICLE',
+                        **vehicle_attrs
                     }
                     
                     detections.append(detection)
+                else:
+                    # Process the associated plate
+                    px1, py1, px2, py2 = associated_plate['box']
+                    plate_crop = frame[py1:py2, px1:px2]
+                    
+                    # Process plate text (existing logic)
+                    plate_text, confidence, state, state_confidence = self._process_plate_ocr(plate_crop)
+                    
+                    if plate_text:
+                        # Get vehicle attributes
+                        vehicle_attrs = self._get_vehicle_attributes_from_crop(frame[vy1:vy2, vx1:vx2])
+                        
+                        # Convert plate crop to base64
+                        plate_img = Image.fromarray(cv2.cvtColor(plate_crop, cv2.COLOR_BGR2RGB))
+                        buffer = BytesIO()
+                        plate_img.save(buffer, format="JPEG", quality=85)
+                        plate_base64 = base64.b64encode(buffer.getvalue()).decode()
+                        
+                        detection = {
+                            'plate_text': plate_text,
+                            'confidence': confidence,
+                            'box': [px1, py1, px2, py2],
+                            'vehicle_box': vehicle['box'],
+                            'plate_image_base64': plate_base64,
+                            'state': state,
+                            'state_confidence': state_confidence,
+                            'is_vehicle_without_plate': False,
+                            **vehicle_attrs
+                        }
+                        
+                        detections.append(detection)
             
-            # Process plates as before
-            for plate_box in plate_boxes:
-                x1, y1, x2, y2 = plate_box['box']
+            # Also process standalone plates (might be motorcycles or partial views)
+            for plate in plate_boxes:
+                # Check if this plate was already processed with a vehicle
+                already_processed = False
+                px1, py1, px2, py2 = plate['box']
+                plate_center_x = (px1 + px2) / 2
+                plate_center_y = (py1 + py2) / 2
                 
-                # Add padding
-                padding = 10
-                y1 = max(0, y1 - padding)
-                y2 = min(frame.shape[0], y2 + padding)
-                x1 = max(0, x1 - padding)
-                x2 = min(frame.shape[1], x2 + padding)
+                for vehicle in vehicle_boxes:
+                    vx1, vy1, vx2, vy2 = vehicle['box']
+                    if (vx1 <= plate_center_x <= vx2 and vy1 <= plate_center_y <= vy2):
+                        already_processed = True
+                        break
                 
-                # Crop plate region
-                plate_crop = frame[y1:y2, x1:x2]
-                
-                if plate_crop.shape[0] < 20 or plate_crop.shape[1] < 50:
-                    continue
-                
-                # Try PlateRecognizer first if available
-                plate_text = None
-                confidence = 0.0
-                state = None
-                state_confidence = 0.0
-                
-                if self.plate_recognizer_func:
-                    try:
-                        # Save crop temporarily for API
-                        temp_path = f"/tmp/plate_{datetime.now().timestamp()}.jpg"
-                        cv2.imwrite(temp_path, plate_crop)
-                        
-                        pr_results = self.plate_recognizer_func(temp_path)
-                        if pr_results and len(pr_results) > 0:
-                            pr_result = pr_results[0]
-                            plate_text = pr_result.get('plate', '')
-                            confidence = 0.9  # PR is generally accurate
-                            state = pr_result.get('state')
-                            state_confidence = pr_result.get('state_confidence', 0)
-                        
-                        # Clean up temp file
-                        import os
-                        os.remove(temp_path)
-                        
-                    except Exception as e:
-                        logger.error(f"PlateRecognizer error: {e}")
-                
-                # Fallback to OCR if no PR result
-                if not plate_text:
-                    try:
-                        ocr_results = self.ocr_reader.readtext(plate_crop, width_ths=0.7, height_ths=0.7)
-                        
-                        if ocr_results:
-                            # Extract best text
-                            best_text = ""
-                            best_conf = 0
-                            
-                            for bbox, text, conf in ocr_results:
-                                if conf > best_conf and len(text) >= 3:
-                                    best_text = text
-                                    best_conf = conf
-                            
-                            if best_text:
-                                plate_text = best_text.upper()
-                                confidence = float(best_conf)
-                    except Exception as e:
-                        logger.error(f"OCR error: {e}")
-                
-                if plate_text:
-                    # Convert crop to base64
-                    plate_img = Image.fromarray(cv2.cvtColor(plate_crop, cv2.COLOR_BGR2RGB))
-                    buffer = BytesIO()
-                    plate_img.save(buffer, format="JPEG", quality=85)
-                    plate_base64 = base64.b64encode(buffer.getvalue()).decode()
+                if not already_processed:
+                    # Process standalone plate
+                    plate_crop = frame[py1:py2, px1:px2]
+                    plate_text, confidence, state, state_confidence = self._process_plate_ocr(plate_crop)
                     
-                    detection = {
-                        'plate_text': plate_text,
-                        'confidence': confidence,
-                        'box': [x1, y1, x2, y2],
-                        'plate_image_base64': plate_base64,
-                        'state': state,
-                        'state_confidence': state_confidence,
-                        'is_vehicle_without_plate': False
-                    }
-                    
-                    detections.append(detection)
+                    if plate_text:
+                        # Convert plate crop to base64
+                        plate_img = Image.fromarray(cv2.cvtColor(plate_crop, cv2.COLOR_BGR2RGB))
+                        buffer = BytesIO()
+                        plate_img.save(buffer, format="JPEG", quality=85)
+                        plate_base64 = base64.b64encode(buffer.getvalue()).decode()
+                        
+                        detection = {
+                            'plate_text': plate_text,
+                            'confidence': confidence,
+                            'box': [px1, py1, px2, py2],
+                            'plate_image_base64': plate_base64,
+                            'state': state,
+                            'state_confidence': state_confidence,
+                            'is_vehicle_without_plate': False
+                        }
+                        
+                        detections.append(detection)
             
             return detections
             
         except Exception as e:
             logger.error(f"Error processing frame: {e}")
             return []
+
+def _process_plate_ocr(self, plate_crop):
+    """Extract plate text using OCR."""
+    plate_text = None
+    confidence = 0.0
+    state = None
+    state_confidence = 0.0
+    
+    if self.plate_recognizer_func:
+        try:
+            # Save crop temporarily for API
+            temp_path = f"/tmp/plate_{datetime.now().timestamp()}.jpg"
+            cv2.imwrite(temp_path, plate_crop)
+            
+            pr_results = self.plate_recognizer_func(temp_path)
+            if pr_results and len(pr_results) > 0:
+                pr_result = pr_results[0]
+                plate_text = pr_result.get('plate', '')
+                confidence = 0.9  # PR is generally accurate
+                state = pr_result.get('state')
+                state_confidence = pr_result.get('state_confidence', 0)
+            
+            os.remove(temp_path)
+            
+        except Exception as e:
+            logger.error(f"PlateRecognizer error: {e}")
+    
+    # Fallback to OCR if no PR result
+    if not plate_text:
+        try:
+            ocr_results = self.ocr_reader.readtext(plate_crop, width_ths=0.7, height_ths=0.7)
+            
+            if ocr_results:
+                # Extract best text
+                best_text = ""
+                best_conf = 0
+                
+                for bbox, text, conf in ocr_results:
+                    if conf > best_conf and len(text) >= 3:
+                        best_text = text
+                        best_conf = conf
+                
+                if best_text:
+                    plate_text = best_text.upper()
+                    confidence = float(best_conf)
+        except Exception as e:
+            logger.error(f"OCR error: {e}")
+    
+    return plate_text, confidence, state, state_confidence
+
+def _get_vehicle_attributes_from_crop(self, vehicle_crop):
+    """Try to get vehicle attributes from crop."""
+    attrs = {}
+    
+    if self.plate_recognizer_func:
+        try:
+            temp_path = f"/tmp/vehicle_attr_{datetime.now().timestamp()}.jpg"
+            cv2.imwrite(temp_path, vehicle_crop)
+            
+            pr_results = self.plate_recognizer_func(temp_path)
+            if pr_results and len(pr_results) > 0:
+                vehicle_info = pr_results[0].get('vehicle', {})
+                attrs = {
+                    'vehicle_type': vehicle_info.get('type'),
+                    'vehicle_type_confidence': vehicle_info.get('type_confidence', 0),
+                    'vehicle_make': vehicle_info.get('make'),
+                    'vehicle_make_confidence': vehicle_info.get('make_confidence', 0),
+                    'vehicle_model': vehicle_info.get('model'),
+                    'vehicle_model_confidence': vehicle_info.get('model_confidence', 0),
+                    'vehicle_color': vehicle_info.get('color'),
+                    'vehicle_color_confidence': vehicle_info.get('color_confidence', 0),
+                    'vehicle_year': vehicle_info.get('year'),
+                    'vehicle_year_confidence': vehicle_info.get('year_confidence', 0)
+                }
+            
+            os.remove(temp_path)
+        except Exception as e:
+            logger.error(f"Error getting vehicle attributes: {e}")
+    
+    return attrs
 
 class RealtimeVideoProcessor:
     """Main video processor that handles capture and streaming."""
@@ -274,7 +369,7 @@ class RealtimeVideoProcessor:
         self.is_processing = False
         self.capture_thread = None
         self.frame_processor = FrameProcessor(model, ocr_reader, plate_recognizer_func)
-        self.vehicle_tracker = VehicleTracker()
+        self.anomaly_detector = EnhancedAnomalyDetector()
         
         # Frame management
         self.current_frame = None
@@ -389,7 +484,7 @@ class RealtimeVideoProcessor:
                         'anomalies': anomalies,
                         'frame_id': result['frame_id'],
                         'fps': self.fps_counter.get_fps(),
-                        'tracking_stats': self.vehicle_tracker.get_tracking_stats()
+                        'tracking_stats': self.anomaly_detector.process_frame_detections(detections)
                     })
                     
                     # Send alerts for high-severity anomalies

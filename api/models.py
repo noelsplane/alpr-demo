@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
+
 
 Base = declarative_base()
 
@@ -75,3 +76,59 @@ class SessionAlert(Base):
     message = Column(Text)
     details = Column(Text, nullable=True)  # JSON string
     alert_time = Column(DateTime, default=datetime.utcnow)
+
+# Add these to models.py after the existing SessionAlert class:
+
+# Add these classes to models.py after the SessionAlert class:
+
+class VehicleTrack(Base):
+    __tablename__ = 'vehicle_tracks'
+    
+    id = Column(Integer, primary_key=True)
+    track_id = Column(String, unique=True, nullable=False)
+    first_seen = Column(DateTime, default=datetime.utcnow)
+    last_seen = Column(DateTime, default=datetime.utcnow)
+    
+    # Vehicle attributes
+    vehicle_type = Column(String, nullable=True)
+    vehicle_make = Column(String, nullable=True)
+    vehicle_model = Column(String, nullable=True)
+    vehicle_color = Column(String, nullable=True)
+    vehicle_year = Column(String, nullable=True)
+    
+    # Confidence scores
+    type_confidence = Column(Float, default=0.0)
+    make_confidence = Column(Float, default=0.0)
+    model_confidence = Column(Float, default=0.0)
+    color_confidence = Column(Float, default=0.0)
+    year_confidence = Column(Float, default=0.0)
+    
+    # Tracking data
+    total_appearances = Column(Integer, default=0)
+    is_suspicious = Column(Boolean, default=False)
+    has_no_plate = Column(Boolean, default=False)
+    anomaly_count = Column(Integer, default=0)
+    
+class TrackPlateAssociation(Base):
+    __tablename__ = 'track_plate_associations'
+    
+    id = Column(Integer, primary_key=True)
+    track_id = Column(String, nullable=False)
+    plate_text = Column(String, nullable=False)
+    first_seen = Column(DateTime, default=datetime.utcnow)
+    last_seen = Column(DateTime, default=datetime.utcnow)
+    appearance_count = Column(Integer, default=1)
+    
+class VehicleAnomaly(Base):
+    __tablename__ = 'vehicle_anomalies'
+    
+    id = Column(Integer, primary_key=True)
+    track_id = Column(String, nullable=False)
+    anomaly_type = Column(String, nullable=False)
+    severity = Column(String, nullable=False)
+    detected_time = Column(DateTime, default=datetime.utcnow)
+    plate_text = Column(String, nullable=True)
+    message = Column(Text)
+    details = Column(Text, nullable=True)  # JSON string
+    image_data = Column(Text, nullable=True)  # Base64 encoded image
+    session_id = Column(Integer, nullable=True)
