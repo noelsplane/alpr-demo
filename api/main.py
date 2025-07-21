@@ -642,11 +642,13 @@ async def start_surveillance(request: dict = None):
     
     if realtime_processor is None:
         # Create processor with PlateRecognizer integration
+        camera_id = f"camera_{video_source}" if video_source != "browser_stream" else "browser_camera"
         realtime_processor = RealtimeVideoProcessor(
             model, 
             ocr, 
             manager,
-            plate_recognizer_func=get_platerecognizer_results
+            plate_recognizer_func=get_platerecognizer_results,
+            camera_id=camera_id
         )
     
     try:
@@ -1283,4 +1285,104 @@ async def generate_anomaly_report(
         return JSONResponse(content=report)
     except Exception as e:
         logger.error(f"Error generating anomaly report: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    
+# Cross-camera tracking endpoints
+@app.post("/api/v1/cameras/register")
+async def register_camera(camera_info: dict):
+    """Register a new camera in the tracking system."""
+    from cross_camera_tracker import CameraInfo, cross_camera_tracker
+    
+    try:
+        camera = CameraInfo(
+            camera_id=camera_info['camera_id'],
+            location_name=camera_info['location_name'],
+            latitude=camera_info['latitude'],
+            longitude=camera_info['longitude'],
+            direction=camera_info.get('direction'),
+            coverage_radius_meters=camera_info.get('coverage_radius_meters', 50.0)
+        )
+        
+        cross_camera_tracker.register_camera(camera)
+        
+        return JSONResponse(content={
+            "status": "success",
+            "message": f"Camera {camera.camera_id} registered successfully"
+        })
+    except Exception as e:
+        logger.error(f"Error registering camera: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.get("/api/v1/tracking/vehicle/{global_id}")
+async def get_vehicle_journey(global_id: str):
+    """Get complete journey information for a specific vehicle."""
+    from cross_camera_tracker import cross_camera_tracker
+    
+    journey = cross_camera_tracker.get_vehicle_journey(global_id)
+    
+    if journey:
+        return JSONResponse(content=journey)
+    else:
+        return JSONResponse(
+            content={"error": f"No journey found for vehicle {global_id}"}, 
+            status_code=404
+        )
+
+
+@app.get("/api/v1/tracking/between-cameras")
+async def find_vehicles_between_cameras(
+    camera_a: str,
+    camera_b: str,
+    time_window_hours: int = 24
+):
+    """Find vehicles that traveled between two specific cameras."""
+    from cross_camera_tracker import cross_camera_tracker
+    
+    try:
+        vehicles = cross_camera_tracker.find_vehicles_between_cameras(
+            camera_a, camera_b, time_window_hours
+        )
+        
+        return JSONResponse(content={
+            "camera_a": camera_a,
+            "camera_b": camera_b,
+            "time_window_hours": time_window_hours,
+            "vehicles_found": len(vehicles),
+            "vehicles": vehicles
+        })
+    except Exception as e:
+        logger.error(f"Error finding vehicles between cameras: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.get("/api/v1/tracking/statistics")
+async def get_tracking_statistics():
+    """Get cross-camera tracking system statistics."""
+    from cross_camera_tracker import cross_camera_tracker
+    
+    stats = cross_camera_tracker.get_tracking_statistics()
+    return JSONResponse(content=stats)
+
+
+@app.post("/api/v1/tracking/process")
+async def process_cross_camera_detection(request: dict):
+    """Process a detection for cross-camera tracking."""
+    from cross_camera_tracker import cross_camera_tracker
+    
+    try:
+        detection = request.get('detection', {})
+        camera_id = request.get('camera_id', 'unknown')
+        timestamp = request.get('timestamp')
+        
+        if timestamp:
+            timestamp = datetime.fromisoformat(timestamp)
+        
+        result = cross_camera_tracker.process_detection(
+            detection, camera_id, timestamp
+        )
+        
+        return JSONResponse(content=result)
+    except Exception as e:
+        logger.error(f"Error processing cross-camera detection: {e}")
         return JSONResponse(content={"error": str(e)}, status_code=500)

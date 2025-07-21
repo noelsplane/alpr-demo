@@ -14,7 +14,8 @@ import threading
 import queue
 import time
 import json
-from anomaly_detector import EnhancedAnomalyDetector  
+from anomaly_detector import EnhancedAnomalyDetector
+from cross_camera_tracker import cross_camera_tracker
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +162,8 @@ class FrameProcessor:
                         try:
                             temp_path = f"/tmp/vehicle_{datetime.now().timestamp()}.jpg"
                             cv2.imwrite(temp_path, vehicle_crop)
-                            
+                            # Add camera ID to detection
+                            detection['camera_id'] = getattr(self, 'camera_id', 'default')
                             pr_results = self.plate_recognizer_func(temp_path)
                             if pr_results and len(pr_results) > 0:
                                 vehicle_info = pr_results[0].get('vehicle', {})
@@ -360,11 +362,12 @@ def _get_vehicle_attributes_from_crop(self, vehicle_crop):
 class RealtimeVideoProcessor:
     """Main video processor that handles capture and streaming."""
     
-    def __init__(self, model, ocr_reader, websocket_manager, plate_recognizer_func=None):
+    def __init__(self, model, ocr_reader, websocket_manager, plate_recognizer_func=None, camera_id=None):
         self.model = model
         self.ocr_reader = ocr_reader
         self.websocket_manager = websocket_manager
         self.plate_recognizer_func = plate_recognizer_func
+        self.camera_id = camera_id or "default_camera"
         
         self.is_processing = False
         self.capture_thread = None
@@ -465,48 +468,82 @@ class RealtimeVideoProcessor:
             cap.release()
             logger.info("Video capture released")
     
-    async def _async_processing_loop(self):
-        """Process results and send updates via WebSocket."""
-        while self.is_processing:
-            try:
-                # Get processing results
-                results = self.frame_processor.get_results()
+async def _async_processing_loop(self):
+    """Process results and send updates via WebSocket."""
+    while self.is_processing:
+        try:
+            # Get processing results
+            results = self.frame_processor.get_results()
+            
+            for result in results:
+                detections = result['detections']
                 
-                for result in results:
-                    detections = result['detections']
-                    
-                    # Track vehicles and detect anomalies
-                    anomalies = self.vehicle_tracker.process_detections(detections)
-                    
-                    # Send detection update
-                    await self.websocket_manager.send_detection_update({
-                        'detections': detections,
-                        'anomalies': anomalies,
-                        'frame_id': result['frame_id'],
-                        'fps': self.fps_counter.get_fps(),
-                        'tracking_stats': self.anomaly_detector.process_frame_detections(detections)
-                    })
-                    
-                    # Send alerts for high-severity anomalies
-                    for anomaly in anomalies:
-                        if anomaly.get('severity') in ['high', 'critical']:
-                            await self.websocket_manager.send_anomaly_alert(anomaly)
+                # Track vehicles and detect anomalies
+                anomalies = self.vehicle_tracker.process_detections(detections)
                 
-                # Send periodic stats update
-                if self.frame_counter % 30 == 0:
-                    await self.websocket_manager.send_detection_update({
-                        'type': 'stats_update',
-                        'fps': self.fps_counter.get_fps(),
-                        'frames_processed': self.frame_counter,
-                        'tracking_stats': self.vehicle_tracker.get_tracking_stats()
-                    })
+                # Process for cross-camera tracking
+                cross_camera_data = []
+                if self.camera_id:
+                    for detection in detections:
+                        tracking_result = cross_camera_tracker.process_detection(
+                            detection, 
+                            self.camera_id,
+                            datetime.now()
+                        )
+                        
+                        # Include cross-camera anomalies
+                        if tracking_result.get('anomalies'):
+                            anomalies.extend(tracking_result['anomalies'])
+                        
+                        # Store cross-camera data for WebSocket update
+                        cross_camera_data.append({
+                            'global_vehicle_id': tracking_result.get('global_vehicle_id'),
+                            'journey_info': tracking_result.get('journey_info', {}),
+                            'vehicle_info': tracking_result.get('vehicle_info', {})
+                        })
                 
-                await asyncio.sleep(0.1)
+                # Send detection update
+                update_data = {
+                    'detections': detections,
+                    'anomalies': anomalies,
+                    'frame_id': result['frame_id'],
+                    'fps': self.fps_counter.get_fps(),
+                    'tracking_stats': self.vehicle_tracker.get_tracking_stats()
+                }
                 
-            except Exception as e:
-                logger.error(f"Error in async processing loop: {e}")
-                await asyncio.sleep(0.5)
-    
+                # Add cross-camera tracking data if available
+                if cross_camera_data:
+                    update_data['cross_camera_tracking'] = cross_camera_data
+                    update_data['cross_camera_stats'] = cross_camera_tracker.get_tracking_statistics()
+                
+                await self.websocket_manager.send_detection_update(update_data)
+                
+                # Send alerts for high-severity anomalies
+                for anomaly in anomalies:
+                    if anomaly.get('severity') in ['high', 'critical']:
+                        await self.websocket_manager.send_anomaly_alert(anomaly)
+            
+            # Send periodic stats update
+            if self.frame_counter % 30 == 0:
+                stats_data = {
+                    'type': 'stats_update',
+                    'fps': self.fps_counter.get_fps(),
+                    'frames_processed': self.frame_counter,
+                    'tracking_stats': self.vehicle_tracker.get_tracking_stats()
+                }
+                
+                # Include cross-camera stats if available
+                if self.camera_id:
+                    stats_data['cross_camera_stats'] = cross_camera_tracker.get_tracking_statistics()
+                
+                await self.websocket_manager.send_detection_update(stats_data)
+            
+            await asyncio.sleep(0.1)
+            
+        except Exception as e:
+            logger.error(f"Error in async processing loop: {e}")
+            await asyncio.sleep(0.5)
+
     async def get_frame_stream(self):
         """Generate JPEG frames for streaming."""
         while self.is_processing:
