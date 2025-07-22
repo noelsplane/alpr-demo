@@ -80,18 +80,18 @@ def test_api_endpoints():
         response = requests.get(f"{API_BASE}/api/v1/surveillance/status")
         if response.status_code == 200:
             data = response.json()
-            print(f"   ✓ Surveillance status: {data['status']}")
+            print(f"   Surveillance status: {data['status']}")
             if data['status'] == 'running':
                 print("   Tracking stats:")
                 stats = data.get('tracking_stats', {})
                 print(f"     - Total vehicles: {stats.get('total_vehicles_tracked', 0)}")
                 print(f"     - Active vehicles: {stats.get('active_vehicles', 0)}")
         else:
-            print(f"   ✗ Failed with status {response.status_code}")
+            print(f"   Failed with status {response.status_code}")
     except Exception as e:
-        print(f"   ✗ Error: {e}")
+        print(f"   Error: {e}")
     
-    print("\n✓ API endpoint tests completed!")
+    print("\nAPI endpoint tests completed!")
 
 if __name__ == "__main__":
     print("Make sure the API server is running (uvicorn main:app --reload)")

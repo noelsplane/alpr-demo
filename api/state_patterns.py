@@ -444,7 +444,7 @@ def verify_all_states():
     if missing:
         print(f"Missing states: {missing}")
     else:
-        print(f"✓ All {len(all_states)} states/territories are included!")
+        print(f"All {len(all_states)} states/territories are included!")
     
     return len(missing) == 0
 
@@ -468,7 +468,7 @@ def test_patterns():
     
     for plate, expected_state in test_plates:
         detected_state, confidence = matcher.extract_state_from_text(plate)
-        status = "✓" if detected_state == expected_state else "✗"
+        status = "PASS" if detected_state == expected_state else "FAIL"
         print(f"{status} {plate} -> Expected: {expected_state}, Got: {detected_state} (conf: {confidence:.2f})")
 
 if __name__ == "__main__":

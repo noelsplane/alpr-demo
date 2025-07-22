@@ -14,13 +14,13 @@ def test_cameras():
         if cap.isOpened():
             ret, frame = cap.read()
             if ret:
-                print(f"✓ Camera {i}: WORKING")
+                print(f"Camera {i}: WORKING")
                 available_cameras.append(i)
             else:
-                print(f"✗ Camera {i}: Opens but can't read frames")
+                print(f"Camera {i}: Opens but can't read frames")
             cap.release()
         else:
-            print(f"✗ Camera {i}: Not available")
+            print(f"Camera {i}: Not available")
     
     return available_cameras
 
