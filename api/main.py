@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, func, and_, or_
 from sqlalchemy.orm import sessionmaker
+from database_config import db_config
 from models import (
     Base,
     PlateDetection,
@@ -43,8 +44,8 @@ load_dotenv()
 PLATERECOGNIZER_TOKEN = os.getenv("PLATERECOGNIZER_TOKEN")
 
 # Database setup
-engine = create_engine('sqlite:///detections.db')
-SessionLocal = sessionmaker(bind=engine)
+engine = db_config.init_engine()
+SessionLocal = db_config.SessionLocal
 Base.metadata.create_all(bind=engine)
 
 # Initialize FastAPI app

@@ -29,6 +29,8 @@ onnxruntime==1.17.0
 requests==2.31.0
 
 geopy==2.4.1
-
-psycopg2-binary==2.9.9
 python-dotenv==1.0.0
+# Database
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.13.1
