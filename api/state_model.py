@@ -24,7 +24,7 @@ try:
     from state_patterns import StatePatternMatcher
 except ImportError:
     logger.warning("state_patterns module not found, using basic patterns")
-    # Basic fallback pattern matcher
+    
     class StatePatternMatcher:
         def __init__(self):
             self.basic_patterns = {
@@ -42,7 +42,6 @@ except ImportError:
             
             cleaned = plate_text.upper().strip().replace(' ', '').replace('-', '')
             
-            # Check basic patterns
             for state, pattern in self.basic_patterns.items():
                 if re.match(pattern, cleaned):
                     return state, 0.8

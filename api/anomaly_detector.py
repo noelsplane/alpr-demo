@@ -132,8 +132,6 @@ class EnhancedAnomalyDetector:
         
         return vehicle_info
     
-    # Replace the _match_or_create_track method in enhanced_anomaly_detector.py with this improved version:
-
     def _match_or_create_track(self, vehicle: Dict) -> str:
         """Match vehicle to existing track or create new one."""
         best_match_id = None
@@ -175,15 +173,11 @@ class EnhancedAnomalyDetector:
                         
                         # High similarity suggests same vehicle with different plate
                         if similarity > 0.8:
-                            # Use the existing track - this will trigger plate switch detection
                             return track_id
             
-            # Create new track
             if vehicle['plate_text']:
-                # Use plate as primary ID
                 track_id = f"plate_{vehicle['plate_text']}"
             else:
-                # Use vehicle signature for no-plate vehicles
                 signature = self.vehicle_matcher.create_vehicle_signature(vehicle['attributes'])
                 track_id = f"vehicle_{signature}_{datetime.now().timestamp()}"
             
@@ -205,21 +199,12 @@ class EnhancedAnomalyDetector:
             # Calculate attribute similarity
             similarity = self._calculate_attribute_similarity(vehicle['attributes'], track_data['attributes'])
             
-            # If attributes are very similar but plate is different, this might be a plate switch
             if similarity > 0.8:
-                # If vehicle has a plate and track has plates, but they don't match
                 if vehicle['plate_text'] and track_data['plates'] and vehicle['plate_text'] not in track_data['plates']:
-                    # Return high score to match this track (will trigger plate switch detection)
-                    return similarity * 0.95  # Slightly less than 1.0 to indicate it's not exact
-                # If both have no plates but attributes match
+                    return similarity * 0.95
                 elif not vehicle['plate_text'] and not track_data['plates']:
                     return similarity
-        
-        # No match
         return 0.0
-
-
-    # Also update the _match_or_create_track method to be simpler and more effective:
 
     def _match_or_create_track(self, vehicle: Dict) -> str:
         """Match vehicle to existing track or create new one."""
@@ -308,13 +293,9 @@ class EnhancedAnomalyDetector:
             # Store the previous plates before adding new one
             previous_plates = list(track['plates'])
             
-            # Add the new plate
             track['plates'].add(vehicle['plate_text'])
             
-            # If we now have more plates than before, a new plate was added
-            # This is where we should detect plate switching
             if len(track['plates']) > len(previous_plates):
-                # This is a new plate for this vehicle!
                 logger.debug(f"New plate detected for track {track_id}: {vehicle['plate_text']}")
                 logger.debug(f"Previous plates: {previous_plates}")
                 logger.debug(f"All plates now: {list(track['plates'])}")
@@ -366,13 +347,9 @@ class EnhancedAnomalyDetector:
 
        # Replace the entire plate switching section (section 2) in _detect_anomalies with this simpler version:
 
-        # 2. License Plate Switching
-        # Check if this vehicle has been seen with different plates
         if vehicle['plate_text'] and track['plates'] and len(track['plates']) > 1:
-            # Get list of all plates seen for this vehicle
             all_plates = list(track['plates'])
             
-            # If there are multiple different plates, it's a plate switch
             if self._should_alert('plate_switch', track_id):
                 anomaly = {
                     'type': 'PLATE_SWITCH',
@@ -797,7 +774,7 @@ if __name__ == "__main__":
         'vehicle_color_confidence': 0.9
     }
     
-    # Test detection 4: Same no-plate vehicle appears again (very suspicious!)
+    # Test detection 4: Same no-plate vehicle appears again
     detection4 = {
         'plate_text': 'NO_PLATE_DETECTED',
         'is_vehicle_without_plate': True,

@@ -82,8 +82,6 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # Global realtime processor and session tracking
 realtime_processor = None
 current_session_id = None
-
-# Helper functions
 def encode_image_to_base64(img_array):
     """Convert numpy array to base64 string."""
     img = Image.fromarray(img_array)
@@ -578,7 +576,6 @@ async def get_vehicle_image(image_name: str):
     )
 
 
-# WebSocket endpoints
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time updates."""

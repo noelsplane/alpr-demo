@@ -40,7 +40,6 @@ class EnhancedOCRProcessor:
                 Image.Resampling.LANCZOS
             )
 
-        # --- basic enhancements ----------------------------------------- #
         pil = ImageEnhance.Contrast(pil).enhance(2.0)
         pil = ImageEnhance.Sharpness(pil).enhance(2.0)
 

@@ -71,7 +71,7 @@ def test_cross_camera_tracking():
         result = response.json()
         print(f"   Processed at {det['camera_id']}: Vehicle ID = {result.get('global_vehicle_id')}")
         if result.get('anomalies'):
-            print(f"   ⚠️  Anomalies: {result['anomalies']}")
+            print(f"   Warning: Anomalies: {result['anomalies']}")
         global_ids.append(result.get('global_vehicle_id'))
     
     # Test 3: Get vehicle journey

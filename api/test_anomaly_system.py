@@ -122,9 +122,9 @@ def test_plate_switch_verbose():
     
     success = stats['plate_switches'] > 0
     if success:
-        print("\n✓ SUCCESS: Plate switch detected!")
+        print("\nSUCCESS: Plate switch detected!")
     else:
-        print("\n✗ FAILED: Plate switch not detected")
+        print("\nFAILED: Plate switch not detected")
         print("\nDebugging info:")
         print(f"  - Total tracks created: {len(detector.vehicle_tracks)}")
         print(f"  - Vehicle match threshold: {detector.config['vehicle_match_threshold']}")

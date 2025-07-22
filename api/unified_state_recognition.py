@@ -215,7 +215,7 @@ class UnifiedStateRecognizer:
                 'patterns': [
                     r'^\d{3}[A-Z]{3}$',       # 123ABC
                     r'^[A-Z]{3}\d{3}$',       # ABC123
-                    r'^\d{3}[A-Z]{2}\d$',     # 284FH8 - Your specific pattern!
+                    r'^\d{3}[A-Z]{2}\d$',     # 284FH8
                     r'^\d{3}[A-Z]{2}$',       # 284FH (without last digit)
                     r'^\d[A-Z]{2}\d{3}$',     # 1AB234
                     r'^\d{2}[A-Z]{2}\d{2}$',  # 12AB34

@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-22T10:23:21.120805",
+  "result": [
+    {
+      "plate": "vgt7519",
+      "state": "VA",
+      "state_confidence": 0.313,
+      "vehicle": {
+        "type": "Unknown",
+        "type_confidence": 0.0,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 7,
+        "ymin": 10,
+        "xmax": 400,
+        "ymax": 195
+      }
+    }
+  ]
+}
