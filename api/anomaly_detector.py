@@ -152,10 +152,7 @@ class EnhancedAnomalyDetector:
                 best_match_score = score
                 best_match_id = track_id
         
-        # Create new track if no good match
         if not best_match_id:
-            # For vehicles with plates, also check if attributes match existing tracks
-            # This helps detect plate switches
             if vehicle['plate_text']:
                 for track_id, track_data in self.vehicle_tracks.items():
                     # Skip old tracks
@@ -193,10 +190,7 @@ class EnhancedAnomalyDetector:
         if vehicle['plate_text'] and vehicle['plate_text'] in track_data['plates']:
             return 1.0
         
-        # Check if vehicle attributes match (for plate switch detection)
-        # This is key - we need to check attributes even when plates don't match
         if vehicle['attributes'].get('make') and track_data['attributes'].get('make'):
-            # Calculate attribute similarity
             similarity = self._calculate_attribute_similarity(vehicle['attributes'], track_data['attributes'])
             
             if similarity > 0.8:
@@ -239,7 +233,6 @@ class EnhancedAnomalyDetector:
             logger.debug(f"Matched to existing track: {best_match_id} (score: {best_match_score})")
             return best_match_id
         
-        # Create new track if no good match
         if vehicle['plate_text']:
             track_id = f"plate_{vehicle['plate_text']}"
         else:
@@ -288,9 +281,7 @@ class EnhancedAnomalyDetector:
             'vehicle': vehicle
         })
         
-        # Update plates - IMPORTANT: Check if this is a new plate before adding
         if vehicle['plate_text']:
-            # Store the previous plates before adding new one
             previous_plates = list(track['plates'])
             
             track['plates'].add(vehicle['plate_text'])
