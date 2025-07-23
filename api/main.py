@@ -37,6 +37,7 @@ import asyncio
 from websocket_manager import manager
 from realtime_processor import RealtimeVideoProcessor
 from fastapi import Query
+from collections import defaultdict
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -1403,14 +1404,6 @@ async def search_vehicles(
     """
     db = get_db()
     try:
-        # Build the base query
-        query = db.query(PlateDetection)
-        
-        # Apply plate filter
-        if plate:
-            # Support partial plate matching
-            query = query.filter(PlateDetection.plate_text.ilike(f"%{plate}%"))
-        
         # Apply time range filter
         end_time = datetime.now()
         if timeRange == "1h":
@@ -1427,71 +1420,190 @@ async def search_vehicles(
         else:
             start_time = end_time - timedelta(hours=24)
         
-        query = query.filter(PlateDetection.timestamp.between(start_time, end_time))
+        # Query regular detections
+        regular_query = db.query(PlateDetection)
+        
+        # Apply plate filter
+        if plate:
+            regular_query = regular_query.filter(PlateDetection.plate_text.ilike(f"%{plate}%"))
+        
+        regular_query = regular_query.filter(PlateDetection.timestamp.between(start_time, end_time))
         
         # Apply vehicle type filter
         if vehicleTypes:
             types = vehicleTypes.split(',')
-            query = query.filter(PlateDetection.vehicle_type.in_(types))
+            regular_query = regular_query.filter(PlateDetection.vehicle_type.in_(types))
         
         # Apply camera filter
         if cameras:
             camera_list = cameras.split(',')
-            query = query.filter(PlateDetection.camera_id.in_(camera_list))
+            regular_query = regular_query.filter(PlateDetection.camera_id.in_(camera_list))
         
-        # Get total count before pagination
-        total_count = query.count()
+        # Query session detections
+        session_query = db.query(SessionDetection)
         
-        # Apply pagination
-        detections = query.order_by(PlateDetection.timestamp.desc())\
-                         .offset(offset)\
-                         .limit(limit)\
-                         .all()
+        if plate:
+            session_query = session_query.filter(SessionDetection.plate_text.ilike(f"%{plate}%"))
         
-        # Check for alerts if requested
+        session_query = session_query.filter(SessionDetection.detection_time.between(start_time, end_time))
+        
+        if vehicleTypes:
+            types = vehicleTypes.split(',')
+            session_query = session_query.filter(SessionDetection.vehicle_type.in_(types))
+        
+        # Get total count from both sources
+        regular_count = regular_query.count()
+        session_count = session_query.count()
+        total_count = regular_count + session_count
+        
+        # Apply pagination to both queries
+        # Split limit between both sources proportionally
+        if regular_count > 0 and session_count > 0:
+            regular_ratio = regular_count / total_count
+            regular_limit = max(1, int(limit * regular_ratio))
+            session_limit = limit - regular_limit
+        elif regular_count > 0:
+            regular_limit = limit
+            session_limit = 0
+        else:
+            regular_limit = 0
+            session_limit = limit
+        
+        # Get regular detections
+        regular_detections = regular_query.order_by(PlateDetection.timestamp.desc())\
+                                        .offset(offset)\
+                                        .limit(regular_limit)\
+                                        .all()
+        
+        # Get session detections
+        session_detections = session_query.order_by(SessionDetection.detection_time.desc())\
+                                        .offset(max(0, offset - regular_count))\
+                                        .limit(session_limit)\
+                                        .all()
+        
+        # Merge and format results
         results = []
-        for detection in detections:
-            result = {
-                'id': detection.id,
-                'plate_text': detection.plate_text,
-                'confidence': detection.confidence,
-                'timestamp': detection.timestamp.isoformat(),
-                'camera_id': detection.camera_id,
-                'image_name': detection.image_name,
-                'plate_image': detection.plate_image_base64,
-                'vehicle': {
-                    'type': detection.vehicle_type,
-                    'make': detection.vehicle_make,
-                    'model': detection.vehicle_model,
-                    'color': detection.vehicle_color,
-                    'year': detection.vehicle_year
-                },
-                'state': detection.state,
-                'state_confidence': detection.state_confidence,
-                'alerts': []
-            }
+        seen_plates_timestamps = set()  # To avoid duplicates
+        
+        # Process regular detections
+        for detection in regular_detections:
+            key = f"{detection.plate_text}_{detection.timestamp.isoformat()}"
+            if key not in seen_plates_timestamps:
+                seen_plates_timestamps.add(key)
+                result = {
+                    'id': detection.id,
+                    'plate_text': detection.plate_text,
+                    'confidence': detection.confidence,
+                    'timestamp': detection.timestamp.isoformat(),
+                    'camera_id': detection.camera_id,
+                    'image_name': detection.image_name,
+                    'plate_image': detection.plate_image_base64,
+                    'vehicle': {
+                        'type': detection.vehicle_type,
+                        'make': detection.vehicle_make,
+                        'model': detection.vehicle_model,
+                        'color': detection.vehicle_color,
+                        'year': detection.vehicle_year
+                    },
+                    'state': detection.state,
+                    'state_confidence': detection.state_confidence,
+                    'detection_source': 'regular',
+                    'alerts': []
+                }
+                results.append(result)
+        
+        # Process session detections
+        for detection in session_detections:
+            key = f"{detection.plate_text}_{detection.detection_time.isoformat()}"
+            if key not in seen_plates_timestamps:
+                seen_plates_timestamps.add(key)
+                
+                # Get session info
+                session_info = db.query(SurveillanceSession).filter(
+                    SurveillanceSession.id == detection.session_id
+                ).first()
+                
+                result = {
+                    'id': f"session_{detection.id}",
+                    'plate_text': detection.plate_text,
+                    'confidence': detection.confidence,
+                    'timestamp': detection.detection_time.isoformat(),
+                    'camera_id': 'surveillance_camera',  # Default camera ID for sessions
+                    'session_id': detection.session_id,
+                    'session_status': session_info.status if session_info else 'unknown',
+                    'frame_id': detection.frame_id,
+                    'plate_image': detection.plate_image_base64,
+                    'vehicle': {
+                        'type': detection.vehicle_type,
+                        'make': detection.vehicle_make,
+                        'model': detection.vehicle_model,
+                        'color': detection.vehicle_color,
+                        'year': None  # Session detection doesn't have year field
+                    },
+                    'state': detection.state,
+                    'state_confidence': detection.state_confidence,
+                    'detection_source': 'session',
+                    'alerts': []
+                }
+                results.append(result)
+        
+        # Sort all results by timestamp
+        results.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        # Check for anomalies if alerts filter is specified
+        if alerts and results:
+            alert_types = alerts.split(',')
+            plate_texts = [r['plate_text'] for r in results if r['plate_text']]
             
-            # Check for anomalies if alerts filter is specified
-            if alerts:
-                alert_types = alerts.split(',')
-                # Query anomalies for this vehicle
-                vehicle_anomalies = db.query(VehicleAnomaly).filter(
-                    VehicleAnomaly.plate_text == detection.plate_text,
-                    VehicleAnomaly.anomaly_type.in_(alert_types)
+            # Query anomalies for these vehicles
+            vehicle_anomalies = db.query(VehicleAnomaly).filter(
+                VehicleAnomaly.plate_text.in_(plate_texts),
+                VehicleAnomaly.anomaly_type.in_(alert_types),
+                VehicleAnomaly.detected_time.between(start_time, end_time)
+            ).all()
+            
+            # Group anomalies by plate
+            anomaly_map = defaultdict(list)
+            for anomaly in vehicle_anomalies:
+                anomaly_map[anomaly.plate_text].append({
+                    'type': anomaly.anomaly_type,
+                    'severity': anomaly.severity,
+                    'timestamp': anomaly.detected_time.isoformat(),
+                    'message': anomaly.message
+                })
+            
+            # Add anomalies to results
+            for result in results:
+                if result['plate_text'] in anomaly_map:
+                    result['alerts'] = anomaly_map[result['plate_text']]
+        
+        # Also check for session alerts
+        if alerts and results:
+            session_ids = [r.get('session_id') for r in results if r.get('session_id')]
+            if session_ids:
+                session_alerts = db.query(SessionAlert).filter(
+                    SessionAlert.session_id.in_(session_ids),
+                    SessionAlert.alert_type.in_(alert_types),
+                    SessionAlert.alert_time.between(start_time, end_time)
                 ).all()
                 
-                for anomaly in vehicle_anomalies:
-                    result['alerts'].append({
-                        'type': anomaly.anomaly_type,
-                        'severity': anomaly.severity,
-                        'timestamp': anomaly.detected_time.isoformat(),
-                        'message': anomaly.message
+                # Group alerts by session
+                session_alert_map = defaultdict(list)
+                for alert in session_alerts:
+                    session_alert_map[alert.session_id].append({
+                        'type': alert.alert_type,
+                        'severity': alert.severity,
+                        'timestamp': alert.alert_time.isoformat(),
+                        'message': alert.message
                     })
-            
-            results.append(result)
+                
+                # Add session alerts to results
+                for result in results:
+                    if result.get('session_id') in session_alert_map:
+                        result['alerts'].extend(session_alert_map[result['session_id']])
         
         return JSONResponse(content={
-            'results': results,
+            'results': results[:limit],  # Ensure we don't exceed limit
             'total': total_count,
             'limit': limit,
             'offset': offset,
@@ -1501,6 +1613,10 @@ async def search_vehicles(
                 'vehicleTypes': vehicleTypes,
                 'alerts': alerts,
                 'cameras': cameras
+            },
+            'source_counts': {
+                'regular_detections': regular_count,
+                'session_detections': session_count
             }
         })
         
@@ -1510,6 +1626,193 @@ async def search_vehicles(
     finally:
         db.close()
 
+@app.get("/api/v1/search/analytics")
+async def get_search_analytics(
+    timeRange: str = Query("24h", description="Time range: 1h, 24h, 7d, 30d"),
+    vehicleTypes: Optional[str] = Query(None, description="Comma-separated vehicle types"),
+    cameras: Optional[str] = Query(None, description="Comma-separated camera IDs")
+):
+    """
+    Get analytics for the search page including both regular and session detections.
+    """
+    db = get_db()
+    try:
+        # Determine time range
+        end_time = datetime.now()
+        if timeRange == "1h":
+            start_time = end_time - timedelta(hours=1)
+        elif timeRange == "24h":
+            start_time = end_time - timedelta(hours=24)
+        elif timeRange == "7d":
+            start_time = end_time - timedelta(days=7)
+        elif timeRange == "30d":
+            start_time = end_time - timedelta(days=30)
+        else:
+            start_time = end_time - timedelta(hours=24)
+        
+        # 1. Suspicious Vehicles (vehicles with anomalies)
+        suspicious_plates = set()
+        
+        # Get plates with anomalies
+        anomaly_query = db.query(VehicleAnomaly.plate_text).filter(
+            VehicleAnomaly.detected_time.between(start_time, end_time),
+            VehicleAnomaly.plate_text.isnot(None)
+        ).distinct()
+        
+        for plate in anomaly_query:
+            suspicious_plates.add(plate[0])
+        
+        # Get plates from session alerts
+        session_alert_query = db.query(SessionAlert.plate_text).filter(
+            SessionAlert.alert_time.between(start_time, end_time),
+            SessionAlert.plate_text.isnot(None)
+        ).distinct()
+        
+        for plate in session_alert_query:
+            suspicious_plates.add(plate[0])
+        
+        suspicious_count = len(suspicious_plates)
+        
+        # 2. Frequent Visitors (plates appearing 5+ times)
+        frequent_plates = set()
+        
+        # Count from regular detections
+        regular_freq = db.query(
+            PlateDetection.plate_text,
+            func.count(PlateDetection.id).label('count')
+        ).filter(
+            PlateDetection.timestamp.between(start_time, end_time),
+            PlateDetection.plate_text.isnot(None)
+        )
+        
+        if vehicleTypes:
+            types = vehicleTypes.split(',')
+            regular_freq = regular_freq.filter(PlateDetection.vehicle_type.in_(types))
+        
+        if cameras:
+            camera_list = cameras.split(',')
+            regular_freq = regular_freq.filter(PlateDetection.camera_id.in_(camera_list))
+        
+        regular_freq = regular_freq.group_by(PlateDetection.plate_text).having(
+            func.count(PlateDetection.id) >= 5
+        ).all()
+        
+        for plate, count in regular_freq:
+            frequent_plates.add(plate)
+        
+        # Count from session detections
+        session_freq = db.query(
+            SessionDetection.plate_text,
+            func.count(SessionDetection.id).label('count')
+        ).filter(
+            SessionDetection.detection_time.between(start_time, end_time),
+            SessionDetection.plate_text.isnot(None)
+        )
+        
+        if vehicleTypes:
+            types = vehicleTypes.split(',')
+            session_freq = session_freq.filter(SessionDetection.vehicle_type.in_(types))
+        
+        session_freq = session_freq.group_by(SessionDetection.plate_text).having(
+            func.count(SessionDetection.id) >= 5
+        ).all()
+        
+        for plate, count in session_freq:
+            frequent_plates.add(plate)
+        
+        # Also check combined counts
+        all_plates = defaultdict(int)
+        
+        # Get all regular detection counts
+        all_regular = db.query(
+            PlateDetection.plate_text,
+            func.count(PlateDetection.id).label('count')
+        ).filter(
+            PlateDetection.timestamp.between(start_time, end_time),
+            PlateDetection.plate_text.isnot(None)
+        ).group_by(PlateDetection.plate_text).all()
+        
+        for plate, count in all_regular:
+            all_plates[plate] += count
+        
+        # Get all session detection counts
+        all_session = db.query(
+            SessionDetection.plate_text,
+            func.count(SessionDetection.id).label('count')
+        ).filter(
+            SessionDetection.detection_time.between(start_time, end_time),
+            SessionDetection.plate_text.isnot(None)
+        ).group_by(SessionDetection.plate_text).all()
+        
+        for plate, count in all_session:
+            all_plates[plate] += count
+        
+        # Add plates with combined count >= 5
+        for plate, total_count in all_plates.items():
+            if total_count >= 5:
+                frequent_plates.add(plate)
+        
+        frequent_count = len(frequent_plates)
+        
+        # 3. Recent Detections (last hour)
+        recent_time = end_time - timedelta(hours=1)
+        
+        regular_recent = db.query(func.count(PlateDetection.id)).filter(
+            PlateDetection.timestamp >= recent_time
+        )
+        
+        if vehicleTypes:
+            types = vehicleTypes.split(',')
+            regular_recent = regular_recent.filter(PlateDetection.vehicle_type.in_(types))
+        
+        if cameras:
+            camera_list = cameras.split(',')
+            regular_recent = regular_recent.filter(PlateDetection.camera_id.in_(camera_list))
+        
+        regular_recent_count = regular_recent.scalar() or 0
+        
+        session_recent = db.query(func.count(SessionDetection.id)).filter(
+            SessionDetection.detection_time >= recent_time
+        )
+        
+        if vehicleTypes:
+            types = vehicleTypes.split(',')
+            session_recent = session_recent.filter(SessionDetection.vehicle_type.in_(types))
+        
+        session_recent_count = session_recent.scalar() or 0
+        
+        recent_count = regular_recent_count + session_recent_count
+        
+        # 4. Active Anomalies (last hour)
+        active_anomaly_count = db.query(func.count(VehicleAnomaly.id)).filter(
+            VehicleAnomaly.detected_time >= recent_time
+        ).scalar() or 0
+        
+        active_session_alerts = db.query(func.count(SessionAlert.id)).filter(
+            SessionAlert.alert_time >= recent_time
+        ).scalar() or 0
+        
+        active_anomalies = active_anomaly_count + active_session_alerts
+        
+        return JSONResponse(content={
+            'analytics': {
+                'suspicious_vehicles': suspicious_count,
+                'frequent_visitors': frequent_count,
+                'recent_detections': recent_count,
+                'active_anomalies': active_anomalies
+            },
+            'time_range': timeRange,
+            'filters': {
+                'vehicleTypes': vehicleTypes,
+                'cameras': cameras
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error calculating search analytics: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    finally:
+        db.close()
 
 @app.get("/api/v1/cameras")
 async def get_cameras():

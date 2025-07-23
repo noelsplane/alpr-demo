@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-23T10:49:55.887214",
+  "result": [
+    {
+      "plate": "8tiv677",
+      "state": "CA",
+      "state_confidence": 0.386,
+      "vehicle": {
+        "type": "Unknown",
+        "type_confidence": 0.0,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 26,
+        "ymin": 64,
+        "xmax": 270,
+        "ymax": 200
+      }
+    }
+  ]
+}

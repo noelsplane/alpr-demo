@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-23T10:52:21.984169",
+  "result": [
+    {
+      "plate": "284fh8",
+      "state": "MI",
+      "state_confidence": 0.057,
+      "vehicle": {
+        "type": "Unknown",
+        "type_confidence": 0.0,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 5,
+        "ymin": 12,
+        "xmax": 271,
+        "ymax": 142
+      }
+    }
+  ]
+}

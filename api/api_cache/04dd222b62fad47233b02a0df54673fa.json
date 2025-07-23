@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-23T10:52:24.453665",
+  "result": [
+    {
+      "plate": "284fh8",
+      "state": "MO",
+      "state_confidence": 0.078,
+      "vehicle": {
+        "type": "Unknown",
+        "type_confidence": 0.0,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 9,
+        "ymin": 24,
+        "xmax": 379,
+        "ymax": 182
+      }
+    }
+  ]
+}

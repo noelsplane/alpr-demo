@@ -284,18 +284,6 @@
             box-shadow: 0 10px 40px rgba(102, 126, 234, 0.1);
         }
 
-        .stat-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-        }
-
         .stat-card.suspicious { --gradient-start: #f5576c; --gradient-end: #f093fb; }
         .stat-card.frequent { --gradient-start: #4facfe; --gradient-end: #00f2fe; }
         .stat-card.recent { --gradient-start: #fa709a; --gradient-end: #fee140; }
@@ -611,25 +599,21 @@
 
         <div class="quick-stats">
             <div class="stat-card suspicious" onclick="loadSuspiciousVehicles()">
-                <div class="stat-icon">⚠️</div>
                 <div class="stat-value" id="suspicious-count">0</div>
                 <div class="stat-label">Suspicious Vehicles</div>
             </div>
 
             <div class="stat-card frequent" onclick="loadFrequentVehicles()">
-                <div class="stat-icon">📊</div>
                 <div class="stat-value" id="frequent-count">0</div>
                 <div class="stat-label">Frequent Visitors</div>
             </div>
 
             <div class="stat-card recent" onclick="loadRecentDetections()">
-                <div class="stat-icon">🕐</div>
                 <div class="stat-value" id="recent-count">0</div>
                 <div class="stat-label">Recent Detections</div>
             </div>
 
             <div class="stat-card anomalies" onclick="loadAnomalies()">
-                <div class="stat-icon">🚨</div>
                 <div class="stat-value" id="anomaly-count">0</div>
                 <div class="stat-label">Active Anomalies</div>
             </div>
@@ -917,7 +901,64 @@
             };
             return cameraNames[cameraId] || cameraId || 'Unknown';
         }
+        // Add this function after the existing JavaScript functions
+async function fetchAnalytics() {
+    try {
+        const timeRange = document.getElementById('timeRange').value;
+        const vehicleType = document.getElementById('vehicleType').value;
+        const camera = document.getElementById('camera').value;
+        
+        const params = new URLSearchParams({
+            timeRange: timeRange
+        });
+        
+        if (vehicleType !== 'all') {
+            params.append('vehicleTypes', vehicleType);
+        }
+        
+        if (camera !== 'all') {
+            params.append('cameras', camera);
+        }
+        
+        const response = await fetch(`/api/v1/search/analytics?${params}`);
+        if (!response.ok) throw new Error('Failed to fetch analytics');
+        
+        const data = await response.json();
+        
+        // Update the analytics cards
+        document.querySelector('.analytics-card:nth-child(1) .analytics-value').textContent = 
+            data.analytics.suspicious_vehicles || 0;
+        document.querySelector('.analytics-card:nth-child(2) .analytics-value').textContent = 
+            data.analytics.frequent_visitors || 0;
+        document.querySelector('.analytics-card:nth-child(3) .analytics-value').textContent = 
+            data.analytics.recent_detections || 0;
+        document.querySelector('.analytics-card:nth-child(4) .analytics-value').textContent = 
+            data.analytics.active_anomalies || 0;
+            
+    } catch (error) {
+        console.error('Error fetching analytics:', error);
+    }
+}
 
+// Update the performSearch function to also fetch analytics
+async function performSearch() {
+    // ... existing search code ...
+    
+    // Add this line at the end of performSearch function
+    await fetchAnalytics();
+}
+
+// Also fetch analytics on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadCameras();
+    // Add this line
+    fetchAnalytics();
+});
+
+// Update analytics when filters change
+document.getElementById('timeRange').addEventListener('change', fetchAnalytics);
+document.getElementById('vehicleType').addEventListener('change', fetchAnalytics);
+document.getElementById('camera').addEventListener('change', fetchAnalytics);
         // Search on Enter key
         document.getElementById('search-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {

@@ -1030,10 +1030,11 @@
         async function initializeInterface() {
             await loadCameraConfiguration();
             await loadDetectionStats();
+            await loadActiveAlertsCount();
             initWebSocket();
-            updateStatsDisplay();
             renderCameraList();
             renderCameraGrid();
+            updateStatsDisplay();
         }
         
         // Load camera configuration from API
@@ -1081,6 +1082,9 @@
                 }];
                 activeCameras.add('default');
             }
+            
+            // Update stats display after loading cameras
+            updateStatsDisplay();
         }
         
         // Load detection statistics from API
@@ -1125,6 +1129,44 @@
                 console.error('Error loading detection stats:', error);
                 detectionStats.total = 0;
                 detectionStats.byCamera = {};
+            }
+            
+            // Update the stats display after loading
+            updateStatsDisplay();
+        }
+        
+        // Update statistics display
+        function updateStatsDisplay() {
+            // Update active cameras count
+            const activeCameraCount = cameras.filter(camera => camera.status === 'active').length;
+            const totalCameraCount = cameras.length;
+            document.getElementById('activeCameras').textContent = `${activeCameraCount}/${totalCameraCount}`;
+            
+            // Update total detections
+            document.getElementById('totalDetections').textContent = detectionStats.total || 0;
+            
+            // Update active alerts (this will be updated by WebSocket messages)
+            // Keep current value or set to 0 if not set
+            const currentAlerts = document.getElementById('activeAlerts').textContent;
+            if (currentAlerts === '2') { // Remove placeholder
+                document.getElementById('activeAlerts').textContent = '0';
+            }
+        }
+        
+        // Load active alerts count from API
+        async function loadActiveAlertsCount() {
+            try {
+                const response = await fetch('/api/v1/anomalies/all?time_window_hours=1');
+                const data = await response.json();
+                
+                if (data.anomalies) {
+                    document.getElementById('activeAlerts').textContent = data.anomalies.length;
+                } else {
+                    document.getElementById('activeAlerts').textContent = '0';
+                }
+            } catch (error) {
+                console.error('Error loading active alerts:', error);
+                document.getElementById('activeAlerts').textContent = '0';
             }
         }
         
@@ -1277,6 +1319,9 @@
                 detectionStats.byCamera[cameraId] = 0;
             }
             detectionStats.byCamera[cameraId]++;
+            
+            // Refresh stats display
+            updateStatsDisplay();
         }
         
         // Show anomaly alert
@@ -1307,6 +1352,9 @@
             setTimeout(() => {
                 if (alertDiv.parentElement) {
                     alertDiv.remove();
+                    // Decrement alert count when alert is removed
+                    const currentCount = parseInt(document.getElementById('activeAlerts').textContent);
+                    document.getElementById('activeAlerts').textContent = Math.max(0, currentCount - 1);
                 }
             }, 10000);
             
@@ -1533,6 +1581,29 @@
         // Close search results
         function closeSearchResults() {
             document.getElementById('searchResults').classList.remove('active');
+        }
+        
+        // Format time ago helper function
+        function formatTimeAgo(timestamp) {
+            if (!timestamp) return '--';
+            
+            const now = new Date();
+            const time = new Date(timestamp);
+            const diff = now - time;
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            
+            if (days > 0) {
+                return `${days}d ago`;
+            } else if (hours > 0) {
+                return `${hours}h ago`;
+            } else if (minutes > 0) {
+                return `${minutes}m ago`;
+            } else {
+                return 'Just now';
+            }
         }
         
         // Initialize on load
