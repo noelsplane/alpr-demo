@@ -1,0 +1,51 @@
+{
+  "timestamp": "2025-07-23T10:41:01.553447",
+  "result": [
+    {
+      "plate": "cmhv744",
+      "state": null,
+      "state_confidence": 0,
+      "vehicle": {
+        "type": "Sedan",
+        "type_confidence": 0.922,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 365,
+        "ymin": 245,
+        "xmax": 413,
+        "ymax": 267
+      }
+    },
+    {
+      "plate": "elvh657",
+      "state": null,
+      "state_confidence": 0,
+      "vehicle": {
+        "type": "Sedan",
+        "type_confidence": 0.925,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 722,
+        "ymin": 249,
+        "xmax": 754,
+        "ymax": 264
+      }
+    }
+  ]
+}

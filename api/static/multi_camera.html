@@ -12,28 +12,100 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: #0a0a0a;
-            color: #e0e0e0;
+            color: #ffffff;
             overflow-x: hidden;
+            min-height: 100vh;
+        }
+        
+        /* Animated background */
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0a 100%);
+        }
+
+        .floating-orbs {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.4;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .orb1 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            top: -150px;
+            left: -150px;
+            animation-delay: 0s;
+        }
+
+        .orb2 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            bottom: -200px;
+            right: -200px;
+            animation-delay: 5s;
+        }
+
+        .orb3 {
+            width: 250px;
+            height: 250px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: 10s;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            33% {
+                transform: translate(30px, -30px) rotate(120deg);
+            }
+            66% {
+                transform: translate(-20px, 20px) rotate(240deg);
+            }
         }
         
         /* Header */
         .header {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.5rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
         
         .header h1 {
-            font-size: 1.5rem;
-            background: linear-gradient(45deg, #4CAF50, #2196F3);
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
+            font-weight: 700;
         }
         
         .header-controls {
@@ -42,46 +114,69 @@
         }
         
         .btn {
-            padding: 0.5rem 1rem;
+            padding: 0.6rem 1.2rem;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 0.9rem;
             transition: all 0.3s ease;
             font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+        
+        .btn:hover::before {
+            transform: translateX(100%);
         }
         
         .btn-primary {
-            background: linear-gradient(45deg, #2196F3, #1976D2);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            border: 1px solid rgba(102, 126, 234, 0.3);
         }
         
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.3);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
         }
         
         .btn-secondary {
-            background: #333;
-            color: #e0e0e0;
-            border: 1px solid #555;
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
         }
         
         .btn-secondary:hover {
-            background: #444;
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
         
         /* Main Layout */
         .main-container {
             display: flex;
-            height: calc(100vh - 70px);
+            height: calc(100vh - 90px);
         }
         
         /* Sidebar */
         .sidebar {
             width: 300px;
-            background: #1a1a1a;
-            border-right: 1px solid #333;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             flex-direction: column;
             transition: transform 0.3s ease;
@@ -94,7 +189,8 @@
         
         .sidebar-tab {
             display: flex;
-            border-bottom: 1px solid #333;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.02);
         }
         
         .tab-button {
@@ -106,12 +202,28 @@
             cursor: pointer;
             transition: all 0.3s ease;
             font-weight: 500;
+            position: relative;
+        }
+        
+        .tab-button::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
         }
         
         .tab-button.active {
-            color: #2196F3;
-            background: rgba(33, 150, 243, 0.1);
-            border-bottom: 2px solid #2196F3;
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .tab-button.active::before {
+            transform: scaleX(1);
         }
         
         .tab-content {
@@ -131,19 +243,22 @@
         
         .search-input {
             width: 100%;
-            padding: 0.75rem;
-            background: #2a2a2a;
-            border: 1px solid #444;
-            border-radius: 4px;
-            color: #e0e0e0;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #ffffff;
             font-size: 0.95rem;
             margin-bottom: 1rem;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
         }
         
         .search-input:focus {
             outline: none;
-            border-color: #2196F3;
-            box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+            background: rgba(255, 255, 255, 0.08);
         }
         
         .filter-section {
@@ -152,7 +267,7 @@
         
         .filter-section h3 {
             font-size: 0.9rem;
-            color: #888;
+            color: rgba(255, 255, 255, 0.5);
             margin-bottom: 0.5rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -192,23 +307,49 @@
         }
         
         .camera-item {
-            background: #2a2a2a;
-            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
             padding: 1rem;
             margin-bottom: 1rem;
-            border: 1px solid #333;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             cursor: pointer;
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            animation: slideInUp 0.4s ease-out;
+        }
+        
+        .camera-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
         }
         
         .camera-item:hover {
-            border-color: #2196F3;
-            transform: translateX(5px);
+            border-color: rgba(102, 126, 234, 0.8);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.1);
+        }
+        
+        .camera-item:hover::before {
+            transform: translateX(0);
         }
         
         .camera-item.active {
             border-color: #4CAF50;
-            background: rgba(76, 175, 80, 0.1);
+            background: rgba(76, 175, 80, 0.15);
+        }
+        
+        .camera-item.active::before {
+            transform: translateX(0);
+            background: #4CAF50;
         }
         
         .camera-name {
@@ -233,9 +374,31 @@
         }
         
         @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
         
         .camera-info {
@@ -248,40 +411,64 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: #0f0f0f;
+            background: rgba(15, 15, 15, 0.5);
+            backdrop-filter: blur(5px);
         }
         
         /* View Controls */
         .view-controls {
-            background: #1a1a1a;
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(10px);
             padding: 1rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #333;
+            border-bottom: 1px solid rgba(51, 51, 51, 0.5);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
         
         .view-selector {
             display: flex;
             gap: 0.5rem;
-            background: #2a2a2a;
-            padding: 0.25rem;
-            border-radius: 4px;
+            background: rgba(42, 42, 42, 0.8);
+            padding: 0.3rem;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(68, 68, 68, 0.3);
         }
         
         .view-option {
-            padding: 0.5rem 1rem;
+            padding: 0.6rem 1rem;
             background: transparent;
             border: none;
             color: #888;
             cursor: pointer;
-            border-radius: 4px;
-            transition: all 0.2s ease;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            position: relative;
+        }
+        
+        .view-option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+            opacity: 0;
+            border-radius: 6px;
+            transition: opacity 0.3s ease;
+            z-index: -1;
         }
         
         .view-option.active {
-            background: #333;
             color: #e0e0e0;
+        }
+        
+        .view-option.active::before {
+            opacity: 1;
         }
         
         .stats-bar {
@@ -321,19 +508,23 @@
         .grid-4x4 { grid-template-columns: repeat(4, 1fr); }
         
         .camera-feed {
-            background: #1a1a1a;
-            border-radius: 8px;
-            border: 1px solid #333;
+            background: rgba(26, 26, 26, 0.9);
+            border-radius: 12px;
+            border: 1px solid rgba(51, 51, 51, 0.6);
             overflow: hidden;
             position: relative;
             display: flex;
             flex-direction: column;
             transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            animation: fadeInScale 0.5s ease-out;
         }
         
         .camera-feed:hover {
-            border-color: #2196F3;
+            border-color: rgba(33, 150, 243, 0.8);
             transform: scale(1.02);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
         }
         
         .camera-feed.fullscreen {
@@ -348,8 +539,9 @@
         }
         
         .feed-header {
-            background: rgba(0, 0, 0, 0.7);
-            padding: 0.5rem 1rem;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(15px);
+            padding: 0.6rem 1rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -358,7 +550,7 @@
             left: 0;
             right: 0;
             z-index: 10;
-            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .feed-title {
@@ -372,21 +564,24 @@
         }
         
         .feed-btn {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             background: rgba(255, 255, 255, 0.1);
-            border: none;
-            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
             color: #e0e0e0;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
         }
         
         .feed-btn:hover {
             background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         
         .feed-video {
@@ -436,17 +631,19 @@
         /* Search Results */
         .search-results {
             position: fixed;
-            top: 70px;
+            top: 0;
             right: 0;
             bottom: 0;
             width: 400px;
-            background: #1a1a1a;
-            border-left: 1px solid #333;
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(15px);
+            border-left: 1px solid rgba(51, 51, 51, 0.5);
             transform: translateX(100%);
             transition: transform 0.3s ease;
             display: flex;
             flex-direction: column;
-            z-index: 100;
+            z-index: 200;
+            box-shadow: -5px 0 20px rgba(0, 0, 0, 0.3);
         }
         
         .search-results.active {
@@ -454,11 +651,13 @@
         }
         
         .results-header {
-            padding: 1rem;
-            border-bottom: 1px solid #333;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(51, 51, 51, 0.5);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background: rgba(42, 42, 42, 0.5);
+            backdrop-filter: blur(10px);
         }
         
         .results-content {
@@ -468,17 +667,39 @@
         }
         
         .result-item {
-            background: #2a2a2a;
-            border-radius: 8px;
+            background: rgba(42, 42, 42, 0.6);
+            border-radius: 12px;
             padding: 1rem;
             margin-bottom: 1rem;
-            border: 1px solid #333;
+            border: 1px solid rgba(51, 51, 51, 0.6);
             cursor: pointer;
             transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            animation: slideInUp 0.3s ease-out;
+        }
+        
+        .result-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #4CAF50, #2196F3);
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
         }
         
         .result-item:hover {
-            border-color: #2196F3;
+            border-color: rgba(33, 150, 243, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .result-item:hover::before {
+            transform: translateX(0);
         }
         
         .result-plate {
@@ -499,10 +720,11 @@
         .result-image {
             width: 100%;
             height: 120px;
-            background: #000;
-            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
             margin-top: 0.5rem;
             overflow: hidden;
+            border: 1px solid rgba(51, 51, 51, 0.5);
         }
         
         .result-image img {
@@ -526,12 +748,133 @@
             .grid-2x2, .grid-3x3, .grid-4x4 { grid-template-columns: 1fr; }
             .search-results { width: 100%; }
         }
+        
+        /* Alert Notifications */
+        .alert-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+        
+        .alert-notification {
+            background: rgba(255, 193, 7, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 8px 25px rgba(255, 193, 7, 0.2);
+            animation: slideInAlert 0.3s ease-out;
+        }
+        
+        .alert-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        
+        .alert-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        
+        .alert-details {
+            flex: 1;
+            color: #333;
+        }
+        
+        .alert-title {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+        
+        .alert-message {
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+        
+        .alert-camera,
+        .alert-time {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        
+        .alert-close {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #333;
+            opacity: 0.7;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .alert-close:hover {
+            opacity: 1;
+        }
+        
+        /* No Results Styling */
+        .no-results {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .no-results-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .no-results-text {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .no-results-hint {
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        
+        @keyframes slideInAlert {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
+    <div class="background">
+        <div class="floating-orbs">
+            <div class="orb orb1"></div>
+            <div class="orb orb2"></div>
+            <div class="orb orb3"></div>
+        </div>
+    </div>
+
     <!-- Header -->
     <div class="header">
-        <h1>ALPR Multi-Camera Surveillance</h1>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <button class="btn btn-secondary" onclick="window.location.href='/ui/navigation.html'" style="padding: 0.5rem 1rem;">
+                ← Back
+            </button>
+            <h1>ALPR Multi-Camera Surveillance</h1>
+        </div>
         <div class="header-controls">
             <button class="btn btn-secondary" onclick="toggleSidebar()">☰ Menu</button>
             <button class="btn btn-primary" onclick="startAllCameras()">Start All Cameras</button>
@@ -622,37 +965,7 @@
                 
                 <!-- Camera List Panel -->
                 <div class="camera-panel" id="cameraPanel">
-                    <div class="camera-item active" onclick="selectCamera('cam_01')">
-                        <div class="camera-name">
-                            <div class="camera-status"></div>
-                            Main Entrance
-                        </div>
-                        <div class="camera-info">Camera 01 • Active • 24 detections/hr</div>
-                    </div>
-                    
-                    <div class="camera-item" onclick="selectCamera('cam_02')">
-                        <div class="camera-name">
-                            <div class="camera-status"></div>
-                            Parking Lot A
-                        </div>
-                        <div class="camera-info">Camera 02 • Active • 18 detections/hr</div>
-                    </div>
-                    
-                    <div class="camera-item" onclick="selectCamera('cam_03')">
-                        <div class="camera-name">
-                            <div class="camera-status"></div>
-                            East Gate
-                        </div>
-                        <div class="camera-info">Camera 03 • Active • 12 detections/hr</div>
-                    </div>
-                    
-                    <div class="camera-item" onclick="selectCamera('cam_04')">
-                        <div class="camera-name">
-                            <div class="camera-status offline"></div>
-                            West Exit
-                        </div>
-                        <div class="camera-info">Camera 04 • Offline</div>
-                    </div>
+                    <!-- Camera items will be populated dynamically -->
                 </div>
             </div>
         </div>
@@ -686,75 +999,7 @@
             
             <!-- Camera Grid -->
             <div class="camera-grid grid-2x2" id="cameraGrid">
-                <div class="camera-feed">
-                    <div class="feed-header">
-                        <span class="feed-title">Main Entrance</span>
-                        <div class="feed-controls">
-                            <button class="feed-btn" onclick="toggleRecording('cam_01')">⏺</button>
-                            <button class="feed-btn" onclick="toggleFullscreen('cam_01')">⛶</button>
-                        </div>
-                    </div>
-                    <div class="feed-video">
-                        <span>Connecting to Camera 01...</span>
-                    </div>
-                    <div class="feed-overlay">
-                        <div class="detection-info">
-                            <div class="detection-plate">ABC 1234</div>
-                            <div class="detection-time">2 seconds ago</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="camera-feed">
-                    <div class="feed-header">
-                        <span class="feed-title">Parking Lot A</span>
-                        <div class="feed-controls">
-                            <button class="feed-btn" onclick="toggleRecording('cam_02')">⏺</button>
-                            <button class="feed-btn" onclick="toggleFullscreen('cam_02')">⛶</button>
-                        </div>
-                    </div>
-                    <div class="feed-video">
-                        <span>Connecting to Camera 02...</span>
-                    </div>
-                    <div class="feed-overlay">
-                        <div class="detection-info">
-                            <div class="detection-plate">XYZ 789</div>
-                            <div class="detection-time">15 seconds ago</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="camera-feed">
-                    <div class="feed-header">
-                        <span class="feed-title">East Gate</span>
-                        <div class="feed-controls">
-                            <button class="feed-btn" onclick="toggleRecording('cam_03')">⏺</button>
-                            <button class="feed-btn" onclick="toggleFullscreen('cam_03')">⛶</button>
-                        </div>
-                    </div>
-                    <div class="feed-video">
-                        <span>Connecting to Camera 03...</span>
-                    </div>
-                    <div class="feed-overlay">
-                        <div class="detection-info">
-                            <div class="detection-plate">No recent detections</div>
-                            <div class="detection-time">--</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="camera-feed">
-                    <div class="feed-header">
-                        <span class="feed-title">West Exit</span>
-                        <div class="feed-controls">
-                            <button class="feed-btn" onclick="toggleRecording('cam_04')">⏺</button>
-                            <button class="feed-btn" onclick="toggleFullscreen('cam_04')">⛶</button>
-                        </div>
-                    </div>
-                    <div class="feed-video">
-                        <span style="color: #f44336;">Camera Offline</span>
-                    </div>
-                </div>
+                <!-- Camera feeds will be populated dynamically -->
             </div>
         </div>
     </div>
@@ -773,16 +1018,182 @@
     <script>
         // WebSocket connection
         let ws = null;
-        let activeCameras = new Set(['cam_01', 'cam_02', 'cam_03']);
+        let cameras = [];
+        let activeCameras = new Set();
         let detectionStats = {
-            total: 156,
-            byCamera: {
-                'cam_01': 24,
-                'cam_02': 18,
-                'cam_03': 12,
-                'cam_04': 0
-            }
+            total: 0,
+            byCamera: {}
         };
+        let recentDetections = [];
+        
+        // Initialize the multi-camera interface
+        async function initializeInterface() {
+            await loadCameraConfiguration();
+            await loadDetectionStats();
+            initWebSocket();
+            updateStatsDisplay();
+            renderCameraList();
+            renderCameraGrid();
+        }
+        
+        // Load camera configuration from API
+        async function loadCameraConfiguration() {
+            try {
+                // In a real system, this would come from your camera configuration API
+                // For now, we'll detect available cameras from recent detections
+                const response = await fetch('/api/v1/detections/recent?limit=100');
+                const data = await response.json();
+                
+                // Extract unique camera sources from recent detections
+                const cameraSet = new Set();
+                if (data.detections) {
+                    data.detections.forEach(detection => {
+                        if (detection.camera_id || detection.source) {
+                            cameraSet.add(detection.camera_id || detection.source || 'Camera 1');
+                        }
+                    });
+                }
+                
+                // If no cameras found in detections, add default camera
+                if (cameraSet.size === 0) {
+                    cameraSet.add('Default Camera');
+                }
+                
+                cameras = Array.from(cameraSet).map((id, index) => ({
+                    id: id,
+                    name: `Camera ${index + 1} (${id})`,
+                    status: 'active',
+                    detectionCount: 0,
+                    lastDetection: null
+                }));
+                
+                cameras.forEach(camera => activeCameras.add(camera.id));
+                
+            } catch (error) {
+                console.error('Error loading camera configuration:', error);
+                // Fallback to single camera setup
+                cameras = [{
+                    id: 'default',
+                    name: 'Default Camera',
+                    status: 'active',
+                    detectionCount: 0,
+                    lastDetection: null
+                }];
+                activeCameras.add('default');
+            }
+        }
+        
+        // Load detection statistics from API
+        async function loadDetectionStats() {
+            try {
+                const response = await fetch('/api/v1/detections/stats');
+                const data = await response.json();
+                
+                if (data.total_detections !== undefined) {
+                    detectionStats.total = data.total_detections;
+                }
+                
+                // Load recent detections for camera-specific stats
+                const recentResponse = await fetch('/api/v1/detections/recent?limit=50');
+                const recentData = await recentResponse.json();
+                
+                if (recentData.detections) {
+                    recentDetections = recentData.detections;
+                    
+                    // Calculate per-camera stats
+                    detectionStats.byCamera = {};
+                    recentData.detections.forEach(detection => {
+                        const cameraId = detection.camera_id || detection.source || 'default';
+                        detectionStats.byCamera[cameraId] = (detectionStats.byCamera[cameraId] || 0) + 1;
+                    });
+                    
+                    // Update camera detection counts
+                    cameras.forEach(camera => {
+                        camera.detectionCount = detectionStats.byCamera[camera.id] || 0;
+                        
+                        // Find most recent detection for this camera
+                        const cameraDetections = recentData.detections.filter(d => 
+                            (d.camera_id || d.source || 'default') === camera.id
+                        );
+                        if (cameraDetections.length > 0) {
+                            camera.lastDetection = cameraDetections[0];
+                        }
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Error loading detection stats:', error);
+                detectionStats.total = 0;
+                detectionStats.byCamera = {};
+            }
+        }
+        
+        // Render camera list in sidebar
+        function renderCameraList() {
+            const cameraPanel = document.getElementById('cameraPanel');
+            cameraPanel.innerHTML = '';
+            
+            cameras.forEach((camera, index) => {
+                const cameraItem = document.createElement('div');
+                cameraItem.className = `camera-item ${index === 0 ? 'active' : ''}`;
+                cameraItem.onclick = () => selectCamera(camera.id);
+                
+                const detectionRate = camera.detectionCount > 0 ? 
+                    `${camera.detectionCount} detections` : 'No recent detections';
+                
+                cameraItem.innerHTML = `
+                    <div class="camera-name">
+                        <div class="camera-status ${camera.status === 'active' ? '' : 'offline'}"></div>
+                        ${camera.name}
+                    </div>
+                    <div class="camera-info">${camera.id} • ${camera.status} • ${detectionRate}</div>
+                `;
+                
+                cameraPanel.appendChild(cameraItem);
+            });
+        }
+        
+        // Render camera grid
+        function renderCameraGrid() {
+            const cameraGrid = document.getElementById('cameraGrid');
+            cameraGrid.innerHTML = '';
+            
+            cameras.forEach(camera => {
+                const cameraFeed = document.createElement('div');
+                cameraFeed.className = 'camera-feed';
+                cameraFeed.setAttribute('data-camera-id', camera.id);
+                
+                const lastDetection = camera.lastDetection;
+                const detectionDisplay = lastDetection ? {
+                    plate: lastDetection.plate_text || 'Unknown',
+                    time: formatTimeAgo(lastDetection.timestamp || lastDetection.detected_time)
+                } : {
+                    plate: 'No recent detections',
+                    time: '--'
+                };
+                
+                cameraFeed.innerHTML = `
+                    <div class="feed-header">
+                        <span class="feed-title">${camera.name}</span>
+                        <div class="feed-controls">
+                            <button class="feed-btn" onclick="toggleRecording('${camera.id}')" title="Toggle Recording">⏺</button>
+                            <button class="feed-btn" onclick="toggleFullscreen('${camera.id}')" title="Fullscreen">⛶</button>
+                        </div>
+                    </div>
+                    <div class="feed-video">
+                        <span>${camera.status === 'active' ? `Monitoring ${camera.id}...` : 'Camera Offline'}</span>
+                    </div>
+                    <div class="feed-overlay">
+                        <div class="detection-info">
+                            <div class="detection-plate">${detectionDisplay.plate}</div>
+                            <div class="detection-time">${detectionDisplay.time}</div>
+                        </div>
+                    </div>
+                `;
+                
+                cameraGrid.appendChild(cameraFeed);
+            });
+        }
         
         // Initialize WebSocket
         function initWebSocket() {
@@ -816,26 +1227,101 @@
                 showAlert(data.data);
             } else if (data.type === 'stats_update') {
                 updateStats(data.data);
+            } else if (data.detection || data.plate_text) {
+                // Handle direct detection objects
+                updateDetection(data);
             }
         }
         
         // Update detection display
         function updateDetection(detection) {
-            // Update camera feed with latest detection
-            // This is a placeholder - integrate with actual video feed
             console.log('New detection:', detection);
+            
+            // Update camera feed overlay with latest detection
+            const cameraId = detection.camera_id || 'camera1';
+            const cameraFeed = document.querySelector(`[data-camera-id="${cameraId}"]`);
+            
+            if (cameraFeed) {
+                const overlay = cameraFeed.querySelector('.feed-overlay .detection-info');
+                if (overlay) {
+                    const plateDiv = overlay.querySelector('.detection-plate');
+                    const timeDiv = overlay.querySelector('.detection-time');
+                    
+                    if (plateDiv && timeDiv) {
+                        plateDiv.textContent = detection.plate_text || 'Unknown';
+                        timeDiv.textContent = formatTimeAgo(detection.detected_time || detection.timestamp);
+                        
+                        // Highlight the detection briefly
+                        overlay.style.backgroundColor = 'rgba(76, 175, 80, 0.3)';
+                        setTimeout(() => {
+                            overlay.style.backgroundColor = '';
+                        }, 2000);
+                    }
+                }
+            }
+            
+            // Update camera in sidebar
+            const camera = cameras.find(c => c.id === cameraId);
+            if (camera) {
+                camera.lastDetection = detection;
+                camera.detectionCount = (camera.detectionCount || 0) + 1;
+                renderCameraList(); // Refresh sidebar
+            }
             
             // Update total detections
             detectionStats.total++;
             document.getElementById('totalDetections').textContent = detectionStats.total;
+            
+            // Update per-camera stats
+            if (!detectionStats.byCamera[cameraId]) {
+                detectionStats.byCamera[cameraId] = 0;
+            }
+            detectionStats.byCamera[cameraId]++;
         }
         
         // Show anomaly alert
         function showAlert(alert) {
             console.log('New alert:', alert);
+            
+            // Create alert notification
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert-notification';
+            alertDiv.innerHTML = `
+                <div class="alert-content">
+                    <div class="alert-icon">⚠️</div>
+                    <div class="alert-details">
+                        <div class="alert-title">${alert.alert_type || 'Anomaly Detected'}</div>
+                        <div class="alert-message">${alert.description || alert.message || 'Unusual activity detected'}</div>
+                        <div class="alert-camera">Camera: ${alert.camera_id || 'Unknown'}</div>
+                        <div class="alert-time">${formatTimeAgo(alert.timestamp || new Date())}</div>
+                    </div>
+                    <button class="alert-close" onclick="this.parentElement.parentElement.remove()">×</button>
+                </div>
+            `;
+            
+            // Add alert to page
+            const alertContainer = document.getElementById('alertContainer') || createAlertContainer();
+            alertContainer.appendChild(alertDiv);
+            
+            // Auto-remove after 10 seconds
+            setTimeout(() => {
+                if (alertDiv.parentElement) {
+                    alertDiv.remove();
+                }
+            }, 10000);
+            
             // Update alert count
             const alertCount = parseInt(document.getElementById('activeAlerts').textContent) + 1;
             document.getElementById('activeAlerts').textContent = alertCount;
+        }
+        
+        // Create alert container if it doesn't exist
+        function createAlertContainer() {
+            const container = document.createElement('div');
+            container.id = 'alertContainer';
+            container.className = 'alert-container';
+            document.body.appendChild(container);
+            return container;
         }
         
         // Update statistics
@@ -953,50 +1439,60 @@
             });
             
             // Build search parameters
-            const params = new URLSearchParams({
-                plate: searchValue,
-                timeRange: timeRange
-            });
+            const params = new URLSearchParams();
             
-            if (vehicleTypes.length > 0) {
-                params.append('vehicleTypes', vehicleTypes.join(','));
+            if (searchValue.trim()) {
+                params.append('plate', searchValue);
             }
             
-            if (alerts.length > 0) {
-                params.append('alerts', alerts.join(','));
+            // Convert time range to actual time bounds
+            const now = new Date();
+            let startTime;
+            switch (timeRange) {
+                case '1h':
+                    startTime = new Date(now.getTime() - 60 * 60 * 1000);
+                    break;
+                case '24h':
+                    startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                    break;
+                case '7d':
+                    startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    break;
+                case '30d':
+                    startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    break;
+            }
+            
+            if (startTime) {
+                params.append('start_time', startTime.toISOString());
             }
             
             try {
-                // This would call your actual search API
-                console.log('Searching with params:', params.toString());
+                // Call actual search API
+                const response = await fetch(`/api/v1/detections/search?${params.toString()}`);
+                const data = await response.json();
                 
                 // Show search results panel
                 document.getElementById('searchResults').classList.add('active');
                 
-                // Mock results for demo
-                const mockResults = [
-                    {
-                        plate: 'ABC 1234',
-                        vehicle: 'Toyota Camry',
-                        color: 'Silver',
-                        lastSeen: '5 minutes ago',
-                        camera: 'Main Entrance',
-                        image: null
-                    },
-                    {
-                        plate: 'XYZ 789',
-                        vehicle: 'Honda CR-V',
-                        color: 'Black',
-                        lastSeen: '15 minutes ago',
-                        camera: 'Parking Lot A',
-                        image: null
-                    }
-                ];
+                // Transform API results to display format
+                const transformedResults = data.detections ? data.detections.map(detection => ({
+                    plate: detection.plate_text || 'Unknown',
+                    vehicle: detection.vehicle_type || 'Unknown Vehicle',
+                    color: detection.vehicle_color || 'Unknown',
+                    lastSeen: formatTimeAgo(detection.detected_time),
+                    camera: detection.camera_id || 'Unknown Camera',
+                    confidence: detection.confidence ? `${(detection.confidence * 100).toFixed(1)}%` : 'N/A',
+                    image: detection.image_path || null
+                })) : [];
                 
-                displaySearchResults(mockResults);
+                displaySearchResults(transformedResults);
                 
             } catch (error) {
                 console.error('Search error:', error);
+                // Show fallback message
+                document.getElementById('searchResults').classList.add('active');
+                displaySearchResults([]);
             }
         }
         
@@ -1005,18 +1501,30 @@
             const container = document.getElementById('resultsContent');
             container.innerHTML = '';
             
+            if (results.length === 0) {
+                container.innerHTML = `
+                    <div class="no-results">
+                        <div class="no-results-icon">🔍</div>
+                        <div class="no-results-text">No matching detections found</div>
+                        <div class="no-results-hint">Try adjusting your search criteria or time range</div>
+                    </div>
+                `;
+                return;
+            }
+            
             results.forEach(result => {
                 const item = document.createElement('div');
                 item.className = 'result-item';
                 item.innerHTML = `
                     <div class="result-plate">${result.plate}</div>
                     <div class="result-details">
-                        <div>Vehicle: ${result.vehicle}</div>
-                        <div>Color: ${result.color}</div>
-                        <div>Last Seen: ${result.lastSeen}</div>
-                        <div>Camera: ${result.camera}</div>
+                        <div><strong>Vehicle:</strong> ${result.vehicle}</div>
+                        <div><strong>Color:</strong> ${result.color}</div>
+                        <div><strong>Last Seen:</strong> ${result.lastSeen}</div>
+                        <div><strong>Camera:</strong> ${result.camera}</div>
+                        ${result.confidence ? `<div><strong>Confidence:</strong> ${result.confidence}</div>` : ''}
                     </div>
-                    ${result.image ? `<div class="result-image"><img src="${result.image}" alt="Plate"></div>` : ''}
+                    ${result.image ? `<div class="result-image"><img src="${result.image}" alt="Detection" loading="lazy"></div>` : ''}
                 `;
                 container.appendChild(item);
             });
@@ -1029,7 +1537,7 @@
         
         // Initialize on load
         window.onload = () => {
-            initWebSocket();
+            initializeInterface();
         };
     </script>
 </body>

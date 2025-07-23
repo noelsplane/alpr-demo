@@ -12,19 +12,84 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
-            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background */
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0a 100%);
+        }
+
+        .floating-orbs {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.4;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .orb1 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            top: -150px;
+            left: -150px;
+            animation-delay: 0s;
+        }
+
+        .orb2 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            bottom: -200px;
+            right: -200px;
+            animation-delay: 5s;
+        }
+
+        .orb3 {
+            width: 250px;
+            height: 250px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: 10s;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            33% {
+                transform: translate(30px, -30px) rotate(120deg);
+            }
+            66% {
+                transform: translate(-20px, 20px) rotate(240deg);
+            }
         }
         
         .header {
-            background: rgba(26, 26, 26, 0.95);
+            background: rgba(255, 255, 255, 0.03);
             backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             padding: 1.5rem 2rem;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
             position: sticky;
             top: 0;
             z-index: 100;
@@ -32,36 +97,40 @@
         
         .header h1 {
             font-size: 2rem;
-            background: linear-gradient(45deg, #4CAF50, #2196F3);
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 0.5rem;
+            font-weight: 700;
         }
         
         .header p {
-            color: #888;
+            color: rgba(255, 255, 255, 0.6);
             font-size: 0.95rem;
         }
         
         .nav-container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 3rem 2rem;
-            flex: 1;
         }
         
         .nav-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 2rem;
             margin-top: 2rem;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
         }
         
         .nav-card {
-            background: rgba(42, 42, 42, 0.6);
-            border: 1px solid #333;
-            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
             padding: 2rem;
             transition: all 0.3s ease;
             cursor: pointer;
@@ -76,15 +145,15 @@
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, #4CAF50, #2196F3);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             transform: translateX(-100%);
             transition: transform 0.3s ease;
         }
         
         .nav-card:hover {
+            background: rgba(255, 255, 255, 0.05);
             transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            border-color: #2196F3;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.1);
         }
         
         .nav-card:hover::before {
@@ -105,7 +174,7 @@
         }
         
         .nav-description {
-            color: #aaa;
+            color: rgba(255, 255, 255, 0.6);
             font-size: 0.95rem;
             line-height: 1.5;
             margin-bottom: 1rem;
@@ -115,7 +184,7 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            color: #2196F3;
+            color: #667eea;
             text-decoration: none;
             font-weight: 500;
             transition: gap 0.3s ease;
@@ -125,38 +194,13 @@
             gap: 1rem;
         }
         
-        .status-badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            margin-top: 1rem;
-        }
-        
-        .status-active {
-            background: rgba(76, 175, 80, 0.2);
-            color: #4CAF50;
-            border: 1px solid #4CAF50;
-        }
-        
-        .status-new {
-            background: rgba(33, 150, 243, 0.2);
-            color: #2196F3;
-            border: 1px solid #2196F3;
-        }
-        
-        .status-beta {
-            background: rgba(255, 152, 0, 0.2);
-            color: #ff9800;
-            border: 1px solid #ff9800;
-        }
-        
         .footer {
-            background: rgba(26, 26, 26, 0.95);
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
             padding: 2rem;
             text-align: center;
-            color: #666;
+            color: rgba(255, 255, 255, 0.5);
             font-size: 0.9rem;
         }
         
@@ -177,9 +221,39 @@
             font-weight: 600;
             color: #4CAF50;
         }
+        
+        /* Responsive Grid Adjustments */
+        @media (min-width: 1200px) {
+            .nav-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 2rem 1rem;
+            }
+            
+            .nav-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .nav-card {
+                padding: 1.5rem;
+            }
+        }
     </style>
 </head>
 <body>
+    <div class="background">
+        <div class="floating-orbs">
+            <div class="orb orb1"></div>
+            <div class="orb orb2"></div>
+            <div class="orb orb3"></div>
+        </div>
+    </div>
+
     <div class="header">
         <h1>ALPR System Dashboard</h1>
         <p>Automatic License Plate Recognition & Vehicle Surveillance</p>
@@ -191,20 +265,18 @@
         <div class="nav-grid">
             <!-- Upload & Detection -->
             <div class="nav-card" onclick="window.location.href='/ui/'">
-                <span class="nav-icon">📷</span>
+                <span class="nav-icon"></span>
                 <h3 class="nav-title">Upload & Detection</h3>
                 <p class="nav-description">Upload images for license plate detection and view detection history</p>
-                <a href="/ui/" class="nav-link">Open Module →</a>
-                <span class="status-badge status-active">Active</span>
+                <a href="/ui/" class="nav-link">Open Module </a>
             </div>
             
             <!-- Live Surveillance -->
             <div class="nav-card" onclick="window.location.href='/ui/surveillance.html'">
-                <span class="nav-icon">🎥</span>
+                <span class="nav-icon"></span>
                 <h3 class="nav-title">Live Surveillance</h3>
                 <p class="nav-description">Real-time single camera monitoring with anomaly detection</p>
-                <a href="/ui/surveillance.html" class="nav-link">Open Module →</a>
-                <span class="status-badge status-active">Active</span>
+                <a href="/ui/surveillance.html" class="nav-link">Open Module </a>
             </div>
             
             <!-- Multi-Camera View -->
@@ -212,8 +284,7 @@
                 <span class="nav-icon"></span>
                 <h3 class="nav-title">Multi-Camera Surveillance</h3>
                 <p class="nav-description">Monitor multiple cameras simultaneously with grid layouts</p>
-                <a href="/ui/multi_camera.html" class="nav-link">Open Module →</a>
-                <span class="status-badge status-new">New</span>
+                <a href="/ui/multi_camera.html" class="nav-link">Open Module </a>
             </div>
             
             <!-- Vehicle Search -->
@@ -221,8 +292,7 @@
                 <span class="nav-icon"></span>
                 <h3 class="nav-title">Vehicle Search</h3>
                 <p class="nav-description">Search vehicles by plate, type, time range, and anomalies</p>
-                <a href="/ui/search.html" class="nav-link">Open Module →</a>
-                <span class="status-badge status-new">New</span>
+                <a href="/ui/search.html" class="nav-link">Open Module </a>
             </div>
             
             <!-- Analytics Dashboard -->
@@ -230,8 +300,7 @@
                 <span class="nav-icon"></span>
                 <h3 class="nav-title">Analytics Dashboard</h3>
                 <p class="nav-description">View statistics, trends, and vehicle profiles</p>
-                <a href="/ui/analytics.html" class="nav-link">Open Module →</a>
-                <span class="status-badge status-beta">Beta</span>
+                <a href="/ui/analytics.html" class="nav-link">Open Module </a>
             </div>
             
             <!-- Alert Management -->
@@ -239,8 +308,7 @@
                 <span class="nav-icon"></span>
                 <h3 class="nav-title">Alert Management</h3>
                 <p class="nav-description">Manage and review system alerts and anomalies</p>
-                <a href="/ui/alerts.html" class="nav-link">Open Module →</a>
-                <span class="status-badge status-beta">Beta</span>
+                <a href="/ui/alerts.html" class="nav-link">Open Module </a>
             </div>
         </div>
     </div>

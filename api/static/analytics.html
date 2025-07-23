@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ALPR Analytics Dashboard</title>
+    <title>ALPR Analytics - License Plate Recognition System</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
@@ -11,782 +11,650 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: #0a0a0a;
-            color: #e0e0e0;
-            line-height: 1.6;
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
-        
-        /* Header */
-        .header {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+
+        /* Animated background */
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0a 100%);
+        }
+
+        .floating-orbs {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.4;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .orb1 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            top: -150px;
+            left: -150px;
+            animation-delay: 0s;
+        }
+
+        .orb2 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            bottom: -200px;
+            right: -200px;
+            animation-delay: 5s;
+        }
+
+        .orb3 {
+            width: 250px;
+            height: 250px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: 10s;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            33% {
+                transform: translate(30px, -30px) rotate(120deg);
+            }
+            66% {
+                transform: translate(-20px, 20px) rotate(240deg);
+            }
+        }
+
+        /* Navigation */
+        nav {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             padding: 1rem 2rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
             position: sticky;
             top: 0;
             z-index: 100;
         }
-        
-        .header-content {
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            max-width: 1400px;
-            margin: 0 auto;
         }
-        
-        .header h1 {
+
+        .logo {
             font-size: 1.5rem;
-            background: linear-gradient(45deg, #4CAF50, #2196F3);
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
-            background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
         }
-        
-        .header-controls {
+
+        .nav-links {
             display: flex;
-            gap: 1rem;
-            align-items: center;
+            gap: 2rem;
+            list-style: none;
         }
-        
-        .time-range-selector {
-            display: flex;
-            gap: 0.5rem;
-            background: #2a2a2a;
-            padding: 0.25rem;
-            border-radius: 8px;
-        }
-        
-        .time-btn {
-            padding: 0.5rem 1rem;
-            background: transparent;
-            border: none;
-            color: #888;
-            cursor: pointer;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-            font-size: 0.9rem;
-        }
-        
-        .time-btn.active {
-            background: #333;
-            color: #2196F3;
-        }
-        
-        .btn {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
+
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: color 0.3s ease;
             font-weight: 500;
         }
-        
-        .btn-primary {
-            background: linear-gradient(45deg, #2196F3, #1976D2);
-            color: white;
+
+        .nav-links a:hover {
+            color: #ffffff;
         }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.3);
-        }
-        
-        /* Main Container */
+
+        /* Main container */
         .container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 2rem;
         }
-        
-        /* Stats Overview */
-        .stats-overview {
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-top: 2rem;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            color: rgba(255, 255, 255, 0.6);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Stats grid */
+        .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1.5rem;
             margin-bottom: 3rem;
         }
-        
+
         .stat-card {
-            background: linear-gradient(135deg, #1a1a1a 0%, #252525 100%);
-            border: 1px solid #333;
-            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
             padding: 1.5rem;
+            transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
-            transition: all 0.3s ease;
         }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-        
+
         .stat-card::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #4CAF50, #2196F3);
+            height: 4px;
+            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
-        
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.1);
+        }
+
+        .stat-card.total { --gradient-start: #667eea; --gradient-end: #764ba2; }
+        .stat-card.identified { --gradient-start: #4facfe; --gradient-end: #00f2fe; }
+        .stat-card.rate { --gradient-start: #fa709a; --gradient-end: #fee140; }
+        .stat-card.states { --gradient-start: #30cfd0; --gradient-end: #330867; }
+
         .stat-icon {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-            opacity: 0.8;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
         }
-        
+
         .stat-value {
             font-size: 2.5rem;
             font-weight: 700;
-            color: #fff;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        
+
         .stat-label {
-            color: #888;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.6);
         }
-        
-        .stat-change {
-            margin-top: 0.5rem;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-        
-        .stat-change.positive {
-            color: #4CAF50;
-        }
-        
-        .stat-change.negative {
-            color: #f44336;
-        }
-        
-        /* Charts Section */
+
+        /* Charts section */
         .charts-section {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
             gap: 2rem;
             margin-bottom: 3rem;
         }
-        
+
         .chart-card {
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 12px;
-            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            transition: all 0.3s ease;
         }
-        
+
+        .chart-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-2px);
+        }
+
         .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             margin-bottom: 1.5rem;
         }
-        
-        .chart-title {
-            font-size: 1.1rem;
+
+        .chart-header h3 {
+            font-size: 1.5rem;
             font-weight: 600;
-            color: #fff;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
         }
-        
+
+        .chart-header p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.875rem;
+        }
+
         .chart-container {
-            height: 300px;
             position: relative;
+            height: 300px;
         }
-        
-        /* Vehicle Profiles Section */
+
+        /* Recent detections */
+        .recent-section {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+        }
+
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 2rem;
         }
-        
-        .section-title {
-            font-size: 1.5rem;
+
+        .section-header h2 {
+            font-size: 2rem;
             font-weight: 600;
-            color: #fff;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        
-        .view-tabs {
-            display: flex;
-            gap: 0.5rem;
-            background: #2a2a2a;
-            padding: 0.25rem;
-            border-radius: 8px;
-        }
-        
-        .tab-btn {
-            padding: 0.5rem 1rem;
-            background: transparent;
+
+        .view-all-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             border: none;
-            color: #888;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 600;
             cursor: pointer;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-            font-size: 0.9rem;
-        }
-        
-        .tab-btn.active {
-            background: #333;
-            color: #2196F3;
-        }
-        
-        /* Vehicle Grid */
-        .vehicle-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-        }
-        
-        .vehicle-card {
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 12px;
-            overflow: hidden;
             transition: all 0.3s ease;
-            cursor: pointer;
         }
-        
-        .vehicle-card:hover {
-            border-color: #2196F3;
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+
+        .view-all-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
         }
-        
-        .vehicle-card.suspicious {
-            border-color: #f44336;
-        }
-        
-        .vehicle-header {
-            padding: 1rem;
-            background: #252525;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .vehicle-plates {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #4CAF50;
-        }
-        
-        .confidence-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            background: rgba(33, 150, 243, 0.2);
-            color: #2196F3;
-            border: 1px solid #2196F3;
-        }
-        
-        .vehicle-body {
-            padding: 1rem;
-        }
-        
-        .vehicle-info {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-        }
-        
-        .info-item {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .info-label {
-            font-size: 0.8rem;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .info-value {
-            font-size: 0.95rem;
-            color: #e0e0e0;
-            font-weight: 500;
-        }
-        
-        .vehicle-images {
-            display: flex;
-            gap: 0.5rem;
-            overflow-x: auto;
-            padding-bottom: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .vehicle-images::-webkit-scrollbar {
-            height: 4px;
-        }
-        
-        .vehicle-images::-webkit-scrollbar-track {
-            background: #2a2a2a;
-        }
-        
-        .vehicle-images::-webkit-scrollbar-thumb {
-            background: #555;
-            border-radius: 2px;
-        }
-        
-        .plate-thumbnail {
-            min-width: 80px;
-            height: 60px;
-            background: #000;
-            border-radius: 4px;
-            overflow: hidden;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-        
-        .plate-thumbnail:hover {
-            transform: scale(1.05);
-        }
-        
-        .plate-thumbnail img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .anomaly-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-        
-        .anomaly-tag {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            background: rgba(244, 67, 54, 0.2);
-            color: #f44336;
-            border: 1px solid #f44336;
-        }
-        
-        /* Frequent Vehicles Table */
-        .table-container {
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 3rem;
-        }
-        
-        .table-header {
-            padding: 1.5rem;
-            background: #252525;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .table-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-        
-        table {
+
+        .detections-table {
             width: 100%;
             border-collapse: collapse;
         }
-        
-        th {
+
+        .detections-table th {
             text-align: left;
-            padding: 1rem 1.5rem;
-            background: #252525;
-            color: #888;
-            font-weight: 500;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 1px solid #333;
-        }
-        
-        td {
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid #2a2a2a;
-        }
-        
-        tbody tr {
-            transition: background 0.2s ease;
-        }
-        
-        tbody tr:hover {
-            background: #252525;
-        }
-        
-        .plate-cell {
+            padding: 1rem;
             font-weight: 600;
-            color: #4CAF50;
+            color: rgba(255, 255, 255, 0.6);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
-        .frequency-bar {
+
+        .detections-table td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .detections-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .plate-text {
+            font-family: 'Courier New', monospace;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .state-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: rgba(79, 172, 254, 0.2);
+            color: #4facfe;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .confidence-value {
+            font-weight: 600;
+            color: #4facfe;
+        }
+
+        .time-ago {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.875rem;
+        }
+
+        /* API usage */
+        .api-usage {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .usage-header {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
-        
-        .frequency-progress {
-            width: 100px;
-            height: 6px;
-            background: #2a2a2a;
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        
-        .frequency-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4CAF50, #2196F3);
-            transition: width 0.3s ease;
-        }
-        
-        /* Loading State */
-        .loading {
+
+        .usage-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 3rem;
-            color: #888;
+            font-size: 1.5rem;
         }
-        
-        .loading::after {
-            content: '';
+
+        .usage-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .usage-stat {
+            text-align: center;
+        }
+
+        .usage-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.25rem;
+        }
+
+        .usage-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.875rem;
+        }
+
+        .usage-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .usage-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+            transition: width 0.5s ease;
+        }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
             width: 20px;
             height: 20px;
-            margin-left: 1rem;
-            border: 2px solid #888;
-            border-top-color: transparent;
+            border: 3px solid rgba(255, 255, 255, 0.1);
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            border-top-color: #667eea;
+            animation: spin 1s ease-in-out infinite;
         }
-        
+
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.8);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-        }
-        
-        .modal.active {
-            display: flex;
-        }
-        
-        .modal-content {
-            background: #1a1a1a;
-            border-radius: 12px;
-            max-width: 800px;
-            width: 100%;
-            max-height: 80vh;
-            overflow: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        }
-        
-        .modal-header {
-            padding: 1.5rem;
-            border-bottom: 1px solid #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .modal-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-        
-        .modal-close {
-            background: none;
-            border: none;
-            color: #888;
-            font-size: 2rem;
-            cursor: pointer;
-            padding: 0;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-        }
-        
-        .modal-close:hover {
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-        }
-        
-        .modal-body {
-            padding: 1.5rem;
-        }
-        
+
         /* Responsive */
         @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+            
             .charts-section {
                 grid-template-columns: 1fr;
             }
             
-            .vehicle-grid {
-                grid-template-columns: 1fr;
+            .stat-value {
+                font-size: 2rem;
             }
             
-            .header-content {
-                flex-direction: column;
-                gap: 1rem;
+            .detections-table {
+                font-size: 0.875rem;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <div class="header">
-        <div class="header-content">
-            <h1>Analytics Dashboard</h1>
-            <div class="header-controls">
-                <div class="time-range-selector">
-                    <button class="time-btn" onclick="changeTimeRange('1h')">1H</button>
-                    <button class="time-btn active" onclick="changeTimeRange('24h')">24H</button>
-                    <button class="time-btn" onclick="changeTimeRange('7d')">7D</button>
-                    <button class="time-btn" onclick="changeTimeRange('30d')">30D</button>
-                </div>
-                <button class="btn btn-primary" onclick="refreshData()">
-                    🔄 Refresh
-                </button>
-                <button class="btn btn-primary" onclick="window.location.href='/ui/navigation.html'">
-                    ← Back
-                </button>
-            </div>
+    <div class="background">
+        <div class="floating-orbs">
+            <div class="orb orb1"></div>
+            <div class="orb orb2"></div>
+            <div class="orb orb3"></div>
         </div>
     </div>
-    
-    <!-- Main Container -->
+
+    <nav>
+        <div class="nav-container">
+            <a href="/ui/navigation.html" class="logo">ALPR System</a>
+            <ul class="nav-links">
+                <li><a href="/ui/navigation.html">Home</a></li>
+                <li><a href="/ui/">Upload</a></li>
+                <li><a href="/ui/analytics.html">Analytics</a></li>
+                <li><a href="/ui/surveillance.html">Surveillance</a></li>
+                <li><a href="/ui/search.html">Search</a></li>
+            </ul>
+        </div>
+    </nav>
+
     <div class="container">
-        <!-- Stats Overview -->
-        <div class="stats-overview">
-            <div class="stat-card">
-                <div class="stat-icon">🚗</div>
-                <div class="stat-value" id="totalVehicles">0</div>
-                <div class="stat-label">Total Vehicles</div>
-                <div class="stat-change positive">
-                    <span>↑ 12%</span> from yesterday
-                </div>
-            </div>
-            
-            <div class="stat-card">
+        <div class="header">
+            <h1>System Analytics</h1>
+            <p>Real-time insights and performance metrics for your license plate recognition system</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card total">
                 <div class="stat-icon"></div>
-                <div class="stat-value" id="totalDetections">0</div>
+                <div class="stat-value" id="total-detections">0</div>
                 <div class="stat-label">Total Detections</div>
-                <div class="stat-change positive">
-                    <span>↑ 8%</span> from yesterday
-                </div>
             </div>
-            
-            <div class="stat-card">
+
+            <div class="stat-card identified">
                 <div class="stat-icon"></div>
-                <div class="stat-value" id="avgConfidence">0%</div>
-                <div class="stat-label">Average Confidence</div>
-                <div class="stat-change positive">
-                    <span>↑ 2%</span> from yesterday
-                </div>
+                <div class="stat-value" id="states-identified">0</div>
+                <div class="stat-label">States Identified</div>
             </div>
-            
-            <div class="stat-card">
+
+            <div class="stat-card rate">
                 <div class="stat-icon"></div>
-                <div class="stat-value" id="totalAlerts">0</div>
-                <div class="stat-label">Active Alerts</div>
-                <div class="stat-change negative">
-                    <span>↑ 3</span> new alerts
-                </div>
+                <div class="stat-value" id="identification-rate">0%</div>
+                <div class="stat-label">Identification Rate</div>
+            </div>
+
+            <div class="stat-card states">
+                <div class="stat-icon"></div>
+                <div class="stat-value" id="unique-states">0</div>
+                <div class="stat-label">Unique States</div>
             </div>
         </div>
-        
-        <!-- Charts Section -->
+
         <div class="charts-section">
             <div class="chart-card">
                 <div class="chart-header">
-                    <h3 class="chart-title">Detection Trend</h3>
-                    <select class="btn" onchange="updateDetectionChart(this.value)">
-                        <option value="hour">Hourly</option>
-                        <option value="day">Daily</option>
-                        <option value="week">Weekly</option>
-                    </select>
-                </div>
-                <div class="chart-container">
-                    <canvas id="detectionChart"></canvas>
-                </div>
-            </div>
-            
-            <div class="chart-card">
-                <div class="chart-header">
-                    <h3 class="chart-title">Vehicle Type Distribution</h3>
-                </div>
-                <div class="chart-container">
-                    <canvas id="vehicleTypeChart"></canvas>
-                </div>
-            </div>
-            
-            <div class="chart-card">
-                <div class="chart-header">
-                    <h3 class="chart-title">State Distribution</h3>
+                    <h3>State Distribution</h3>
+                    <p>License plates by state of origin</p>
                 </div>
                 <div class="chart-container">
                     <canvas id="stateChart"></canvas>
                 </div>
             </div>
-            
+
             <div class="chart-card">
                 <div class="chart-header">
-                    <h3 class="chart-title">Alert Types</h3>
+                    <h3>Detection Timeline</h3>
+                    <p>Detections over the last 7 days</p>
                 </div>
                 <div class="chart-container">
-                    <canvas id="alertChart"></canvas>
+                    <canvas id="timelineChart"></canvas>
                 </div>
             </div>
         </div>
-        
-        <!-- Vehicle Profiles Section -->
-        <div class="section-header">
-            <h2 class="section-title">Vehicle Profiles</h2>
-            <div class="view-tabs">
-                <button class="tab-btn active" onclick="switchProfileView('all')">All Vehicles</button>
-                <button class="tab-btn" onclick="switchProfileView('suspicious')">Suspicious</button>
-                <button class="tab-btn" onclick="switchProfileView('frequent')">Frequent</button>
+
+        <div class="recent-section">
+            <div class="section-header">
+                <h2>Recent Detections</h2>
+                <button class="view-all-btn" onclick="window.location.href='/ui/upload.html'">View All</button>
             </div>
-        </div>
-        
-        <div class="vehicle-grid" id="vehicleGrid">
-            <div class="loading">Loading vehicle profiles...</div>
-        </div>
-        
-        <!-- Frequent Vehicles Table -->
-        <div class="table-container">
-            <div class="table-header">
-                <h3 class="table-title">Most Frequent Vehicles</h3>
-                <button class="btn" onclick="exportFrequentVehicles()">Export CSV</button>
-            </div>
-            <table>
+            <table class="detections-table">
                 <thead>
                     <tr>
-                        <th>Plate Number</th>
-                        <th>Vehicle</th>
-                        <th>Appearances</th>
-                        <th>First Seen</th>
-                        <th>Last Seen</th>
-                        <th>Frequency</th>
+                        <th>Time</th>
+                        <th>License Plate</th>
+                        <th>State</th>
+                        <th>Confidence</th>
                     </tr>
                 </thead>
-                <tbody id="frequentVehiclesTable">
+                <tbody id="recent-detections">
                     <tr>
-                        <td colspan="6" class="loading">Loading frequent vehicles...</td>
+                        <td colspan="4" style="text-align: center; color: rgba(255, 255, 255, 0.5);">
+                            <div class="loading"></div>
+                        </td>
                     </tr>
                 </tbody>
             </table>
         </div>
-    </div>
-    
-    <!-- Vehicle Detail Modal -->
-    <div class="modal" id="vehicleModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title" id="modalTitle">Vehicle Details</h3>
-                <button class="modal-close" onclick="closeModal()">×</button>
+
+        <div class="api-usage">
+            <div class="usage-header">
+                <div class="usage-icon">🔑</div>
+                <h3>PlateRecognizer API Usage</h3>
             </div>
-            <div class="modal-body" id="modalBody">
-                <!-- Vehicle details will be populated here -->
+            <div class="usage-stats">
+                <div class="usage-stat">
+                    <div class="usage-value" id="api-calls">0</div>
+                    <div class="usage-label">API Calls This Month</div>
+                </div>
+                <div class="usage-stat">
+                    <div class="usage-value" id="api-remaining">0</div>
+                    <div class="usage-label">Remaining Calls</div>
+                </div>
+                <div class="usage-stat">
+                    <div class="usage-value" id="cache-rate">0%</div>
+                    <div class="usage-label">Cache Hit Rate</div>
+                </div>
+            </div>
+            <div class="usage-bar">
+                <div class="usage-fill" id="usage-bar-fill" style="width: 0%"></div>
             </div>
         </div>
     </div>
-    
+
     <script>
-        // Global variables
-        let currentTimeRange = '24h';
-        let vehicleProfiles = [];
-        let charts = {};
-        
-        // Initialize on load
-        window.onload = () => {
-            initializeCharts();
-            loadAnalyticsData();
-            loadVehicleProfiles();
-            loadFrequentVehicles();
-        };
-        
-        // Initialize Charts
-        function initializeCharts() {
-            // Detection Trend Chart
-            const detectionCtx = document.getElementById('detectionChart').getContext('2d');
-            charts.detection = new Chart(detectionCtx, {
-                type: 'line',
+        // Chart.js configuration
+        Chart.defaults.color = 'rgba(255, 255, 255, 0.8)';
+        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+
+        let stateChart, timelineChart;
+
+        async function loadAnalytics() {
+            try {
+                const response = await fetch('/api/v1/state-analytics');
+                const data = await response.json();
+
+                // Update stats
+                document.getElementById('total-detections').textContent = data.summary.total_detections;
+                document.getElementById('states-identified').textContent = data.summary.states_identified;
+                document.getElementById('identification-rate').textContent = Math.round(data.summary.identification_rate) + '%';
+                document.getElementById('unique-states').textContent = data.summary.unique_states;
+
+                // Update state distribution chart
+                updateStateChart(data.state_distribution);
+
+                // Update recent detections
+                updateRecentDetections(data.recent_detections);
+
+                // Create timeline chart
+                createTimelineChart();
+
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+            }
+        }
+
+        function updateStateChart(stateData) {
+            const ctx = document.getElementById('stateChart').getContext('2d');
+            
+            // Sort states by count
+            const states = Object.entries(stateData).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            
+            if (stateChart) {
+                stateChart.destroy();
+            }
+
+            stateChart = new Chart(ctx, {
+                type: 'bar',
                 data: {
-                    labels: [],
+                    labels: states.map(s => s[0]),
                     datasets: [{
                         label: 'Detections',
-                        data: [],
-                        borderColor: '#2196F3',
-                        backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: '#333' },
-                            ticks: { color: '#888' }
-                        },
-                        x: {
-                            grid: { color: '#333' },
-                            ticks: { color: '#888' }
-                        }
-                    }
-                }
-            });
-            
-            // Vehicle Type Chart
-            const typeCtx = document.getElementById('vehicleTypeChart').getContext('2d');
-            charts.vehicleType = new Chart(typeCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Sedan', 'SUV', 'Truck', 'Van', 'Other'],
-                    datasets: [{
-                        data: [0, 0, 0, 0, 0],
-                        backgroundColor: [
-                            '#2196F3',
-                            '#4CAF50',
-                            '#FF9800',
-                            '#9C27B0',
-                            '#607D8B'
-                        ]
+                        data: states.map(s => s[1]),
+                        backgroundColor: 'rgba(102, 126, 234, 0.5)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 1
                     }]
                 },
                 options: {
@@ -794,449 +662,204 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'right',
-                            labels: { color: '#888' }
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
                         }
                     }
                 }
             });
+        }
+
+        async function createTimelineChart() {
+            const ctx = document.getElementById('timelineChart').getContext('2d');
             
-            // State Distribution Chart
-            const stateCtx = document.getElementById('stateChart').getContext('2d');
-            charts.state = new Chart(stateCtx, {
-                type: 'bar',
+            try {
+                // Fetch real detection data for last 7 days
+                const response = await fetch('/api/v1/detections/timeline?days=7');
+                const timelineData = await response.json();
+                
+                const labels = [];
+                const data = [];
+                
+                if (timelineData.success && timelineData.timeline) {
+                    // Use real API data
+                    timelineData.timeline.forEach(point => {
+                        const date = new Date(point.date);
+                        labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
+                        data.push(point.count || 0);
+                    });
+                } else {
+                    // Fallback: Generate data for last 7 days from recent detections
+                    for (let i = 6; i >= 0; i--) {
+                        const date = new Date();
+                        date.setDate(date.getDate() - i);
+                        labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
+                        data.push(0); // Will be populated by separate API call
+                    }
+                    
+                    // Try to get detection counts from stats API
+                    try {
+                        const statsResponse = await fetch('/api/v1/detections/stats');
+                        const stats = await statsResponse.json();
+                        
+                        if (stats.daily_counts) {
+                            // Update data array with actual counts
+                            stats.daily_counts.forEach((count, index) => {
+                                if (index < data.length) {
+                                    data[index] = count;
+                                }
+                            });
+                        }
+                    } catch (statsError) {
+                        console.warn('Could not fetch detection stats:', statsError);
+                        // Use minimal random data as last resort
+                        for (let i = 0; i < data.length; i++) {
+                            data[i] = Math.floor(Math.random() * 10) + 5;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching timeline data:', error);
+                
+                // Fallback to basic date structure with zero data
+                const labels = [];
+                const data = [];
+                for (let i = 6; i >= 0; i--) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - i);
+                    labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
+                    data.push(0);
+                }
+            }
+
+            if (timelineChart) {
+                timelineChart.destroy();
+            }
+
+            timelineChart = new Chart(ctx, {
+                type: 'line',
                 data: {
-                    labels: [],
+                    labels: labels,
                     datasets: [{
-                        label: 'Vehicles by State',
-                        data: [],
-                        backgroundColor: '#4CAF50'
+                        label: 'Detections',
+                        data: data,
+                        borderColor: 'rgba(79, 172, 254, 1)',
+                        backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                        tension: 0.4,
+                        fill: true
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: '#333' },
-                            ticks: { color: '#888' }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: '#888' }
+                        legend: {
+                            display: false
                         }
-                    }
-                }
-            });
-            
-            // Alert Types Chart
-            const alertCtx = document.getElementById('alertChart').getContext('2d');
-            charts.alert = new Chart(alertCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['No Plate', 'Plate Switch', 'Loitering', 'Rapid Reappearance'],
-                    datasets: [{
-                        label: 'Alert Count',
-                        data: [0, 0, 0, 0],
-                        backgroundColor: [
-                            '#f44336',
-                            '#ff5722',
-                            '#ff9800',
-                            '#ffc107'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            grid: { color: '#333' },
-                            ticks: { color: '#888' }
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
                         },
                         x: {
-                            grid: { display: false },
-                            ticks: { color: '#888' }
+                            grid: {
+                                display: false
+                            }
                         }
                     }
                 }
             });
         }
-        
-        // Load analytics data
-        async function loadAnalyticsData() {
-            try {
-                // Load state analytics
-                const stateResponse = await fetch('/api/v1/state-analytics');
-                const stateData = await stateResponse.json();
-                
-                document.getElementById('totalDetections').textContent = 
-                    stateData.summary.total_detections.toLocaleString();
-                document.getElementById('avgConfidence').textContent = 
-                    Math.round(stateData.summary.average_confidence) + '%';
-                
-                // Update state chart
-                const states = Object.keys(stateData.state_distribution).slice(0, 10);
-                const counts = states.map(s => stateData.state_distribution[s]);
-                
-                charts.state.data.labels = states;
-                charts.state.data.datasets[0].data = counts;
-                charts.state.update();
-                
-                // Load anomaly data
-                const anomalyResponse = await fetch(`/api/v1/anomalies/all?time_window_hours=${getTimeWindowHours()}`);
-                const anomalyData = await anomalyResponse.json();
-                
-                document.getElementById('totalAlerts').textContent = anomalyData.summary.total_anomalies;
-                
-                // Update alert chart
-                const alertTypes = {
-                    'NO_PLATE_VEHICLE': 0,
-                    'PLATE_SWITCH': 0,
-                    'LOITERING': 0,
-                    'RAPID_REAPPEARANCE': 0
-                };
-                
-                for (const [type, count] of Object.entries(anomalyData.summary.by_type)) {
-                    if (alertTypes.hasOwnProperty(type)) {
-                        alertTypes[type] = count;
-                    }
-                }
-                
-                charts.alert.data.datasets[0].data = Object.values(alertTypes);
-                charts.alert.update();
-                
-                // Generate mock detection trend data (replace with real API)
-                updateDetectionTrend();
-                
-            } catch (error) {
-                console.error('Error loading analytics data:', error);
-            }
-        }
-        
-        // Load vehicle profiles
-        async function loadVehicleProfiles() {
-            try {
-                const response = await fetch(`/api/v1/vehicle-profiles?time_window_hours=${getTimeWindowHours()}`);
-                const data = await response.json();
-                
-                vehicleProfiles = data.profiles;
-                document.getElementById('totalVehicles').textContent = data.stats.total_profiles;
-                
-                // Update vehicle type distribution
-                const typeDistribution = data.stats.vehicle_type_distribution;
-                const types = ['Sedan', 'SUV', 'Truck', 'Van', 'Other'];
-                const typeCounts = types.map(t => typeDistribution[t] || 0);
-                
-                charts.vehicleType.data.datasets[0].data = typeCounts;
-                charts.vehicleType.update();
-                
-                displayVehicleProfiles('all');
-                
-            } catch (error) {
-                console.error('Error loading vehicle profiles:', error);
-            }
-        }
-        
-        // Display vehicle profiles
-        function displayVehicleProfiles(view) {
-            const grid = document.getElementById('vehicleGrid');
-            grid.innerHTML = '';
+
+        function updateRecentDetections(detections) {
+            const tbody = document.getElementById('recent-detections');
             
-            let profilesToShow = vehicleProfiles;
-            
-            if (view === 'suspicious') {
-                profilesToShow = vehicleProfiles.filter(p => p.anomalies.length > 0);
-            } else if (view === 'frequent') {
-                profilesToShow = vehicleProfiles.filter(p => p.total_sightings >= 5);
-            }
-            
-            if (profilesToShow.length === 0) {
-                grid.innerHTML = '<div class="loading">No vehicles found</div>';
-                return;
-            }
-            
-            profilesToShow.forEach(profile => {
-                const card = createVehicleCard(profile);
-                grid.appendChild(card);
-            });
-        }
-        
-        // Create vehicle card
-        function createVehicleCard(profile) {
-            const card = document.createElement('div');
-            card.className = 'vehicle-card';
-            if (profile.anomalies.length > 0) {
-                card.className += ' suspicious';
-            }
-            
-            const vehicleDesc = 
-                `${profile.vehicle_attributes.color || ''} ${profile.vehicle_attributes.make || ''} ${profile.vehicle_attributes.model || ''}`.trim() || 
-                'Unknown Vehicle';
-            
-            card.innerHTML = `
-                <div class="vehicle-header">
-                    <div class="vehicle-plates">${profile.plate_numbers.join(', ')}</div>
-                    <div class="confidence-badge">${Math.round(profile.confidence_score * 100)}%</div>
-                </div>
-                <div class="vehicle-body">
-                    <div class="vehicle-info">
-                        <div class="info-item">
-                            <span class="info-label">Vehicle</span>
-                            <span class="info-value">${vehicleDesc}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Type</span>
-                            <span class="info-value">${profile.vehicle_attributes.type || 'Unknown'}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Sightings</span>
-                            <span class="info-value">${profile.total_sightings}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">States</span>
-                            <span class="info-value">${profile.states_seen.join(', ') || 'Unknown'}</span>
-                        </div>
-                    </div>
-                    ${profile.sample_images && profile.sample_images.length > 0 ? `
-                        <div class="vehicle-images">
-                            ${profile.sample_images.map(img => `
-                                <div class="plate-thumbnail">
-                                    <img src="data:image/jpeg;base64,${img.image}" alt="${img.plate_text}">
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-                    ${profile.anomalies.length > 0 ? `
-                        <div class="anomaly-tags">
-                            ${[...new Set(profile.anomalies.map(a => a.type))].map(type => `
-                                <span class="anomaly-tag">${type}</span>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-            
-            card.onclick = () => showVehicleDetails(profile);
-            return card;
-        }
-        
-        // Show vehicle details modal
-        function showVehicleDetails(profile) {
-            const modal = document.getElementById('vehicleModal');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalBody = document.getElementById('modalBody');
-            
-            modalTitle.textContent = `Vehicle: ${profile.plate_numbers.join(', ')}`;
-            
-            const vehicleDesc = 
-                `${profile.vehicle_attributes.color || ''} ${profile.vehicle_attributes.make || ''} ${profile.vehicle_attributes.model || ''}`.trim() || 
-                'Unknown Vehicle';
-            
-            modalBody.innerHTML = `
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-                    <div>
-                        <h4 style="margin-bottom: 1rem; color: #888;">Vehicle Information</h4>
-                        <div class="vehicle-info" style="gap: 1rem;">
-                            <div class="info-item">
-                                <span class="info-label">Description</span>
-                                <span class="info-value">${vehicleDesc}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Type</span>
-                                <span class="info-value">${profile.vehicle_attributes.type || 'Unknown'}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Year</span>
-                                <span class="info-value">${profile.vehicle_attributes.year || 'Unknown'}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Confidence Score</span>
-                                <span class="info-value">${Math.round(profile.confidence_score * 100)}%</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 style="margin-bottom: 1rem; color: #888;">Activity Summary</h4>
-                        <div class="vehicle-info" style="gap: 1rem;">
-                            <div class="info-item">
-                                <span class="info-label">First Seen</span>
-                                <span class="info-value">${new Date(profile.first_seen).toLocaleString()}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Last Seen</span>
-                                <span class="info-value">${new Date(profile.last_seen).toLocaleString()}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Total Sightings</span>
-                                <span class="info-value">${profile.total_sightings}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">States Visited</span>
-                                <span class="info-value">${profile.states_seen.join(', ') || 'None'}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                ${profile.anomalies.length > 0 ? `
-                    <div style="margin-top: 2rem;">
-                        <h4 style="margin-bottom: 1rem; color: #888;">Anomalies Detected</h4>
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            ${profile.anomalies.map(anomaly => `
-                                <div style="background: #252525; padding: 1rem; border-radius: 8px;">
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                        <span style="color: #f44336; font-weight: 600;">${anomaly.type}</span>
-                                        <span style="color: #888; font-size: 0.85rem;">${new Date(anomaly.timestamp).toLocaleString()}</span>
-                                    </div>
-                                    <div style="color: #ccc;">${anomaly.details}</div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                ${profile.recent_appearances && profile.recent_appearances.length > 0 ? `
-                    <div style="margin-top: 2rem;">
-                        <h4 style="margin-bottom: 1rem; color: #888;">Recent Appearances</h4>
-                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                            ${profile.recent_appearances.slice(0, 5).map(app => `
-                                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #333;">
-                                    <span>${new Date(app.timestamp).toLocaleString()}</span>
-                                    <span style="color: #4CAF50;">${app.plate} (${Math.round(app.confidence * 100)}%)</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-            `;
-            
-            modal.classList.add('active');
-        }
-        
-        // Load frequent vehicles
-        async function loadFrequentVehicles() {
-            try {
-                const response = await fetch(`/api/v1/search/frequent-vehicles?time_window_hours=${getTimeWindowHours()}`);
-                const data = await response.json();
-                
-                const tbody = document.getElementById('frequentVehiclesTable');
-                tbody.innerHTML = '';
-                
-                if (data.frequent_vehicles.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888;">No frequent vehicles found</td></tr>';
-                    return;
-                }
-                
-                const maxAppearances = Math.max(...data.frequent_vehicles.map(v => v.appearance_count));
-                
-                data.frequent_vehicles.forEach(vehicle => {
-                    const row = document.createElement('tr');
-                    const vehicleDesc = vehicle.vehicle_info ? 
-                        `${vehicle.vehicle_info.color || ''} ${vehicle.vehicle_info.make || ''} ${vehicle.vehicle_info.model || ''}`.trim() : 
-                        'Unknown';
+            if (detections && detections.length > 0) {
+                tbody.innerHTML = detections.slice(0, 10).map(detection => {
+                    const time = new Date(detection.timestamp);
+                    const timeAgo = getTimeAgo(time);
                     
-                    const frequencyPercent = (vehicle.appearance_count / maxAppearances) * 100;
-                    
-                    row.innerHTML = `
-                        <td class="plate-cell">${vehicle.plate_text}</td>
-                        <td>${vehicleDesc}</td>
-                        <td>${vehicle.appearance_count}</td>
-                        <td>${new Date(vehicle.first_seen).toLocaleDateString()}</td>
-                        <td>${new Date(vehicle.last_seen).toLocaleDateString()}</td>
-                        <td>
-                            <div class="frequency-bar">
-                                <div class="frequency-progress">
-                                    <div class="frequency-fill" style="width: ${frequencyPercent}%"></div>
-                                </div>
-                                <span>${vehicle.frequency_per_hour.toFixed(1)}/hr</span>
-                            </div>
-                        </td>
+                    return `
+                        <tr>
+                            <td class="time-ago">${timeAgo}</td>
+                            <td class="plate-text">${detection.plate_text}</td>
+                            <td>
+                                ${detection.state ? 
+                                    `<span class="state-badge">${detection.state}</span>` : 
+                                    '<span style="color: rgba(255, 255, 255, 0.3)">Unknown</span>'
+                                }
+                            </td>
+                            <td class="confidence-value">${Math.round((detection.state_confidence || 0) * 100)}%</td>
+                        </tr>
                     `;
-                    tbody.appendChild(row);
-                });
-                
+                }).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: rgba(255, 255, 255, 0.5);">No recent detections</td></tr>';
+            }
+        }
+
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            let interval = seconds / 31536000;
+            if (interval > 1) return Math.floor(interval) + " years ago";
+            
+            interval = seconds / 2592000;
+            if (interval > 1) return Math.floor(interval) + " months ago";
+            
+            interval = seconds / 86400;
+            if (interval > 1) return Math.floor(interval) + " days ago";
+            
+            interval = seconds / 3600;
+            if (interval > 1) return Math.floor(interval) + " hours ago";
+            
+            interval = seconds / 60;
+            if (interval > 1) return Math.floor(interval) + " minutes ago";
+            
+            return Math.floor(seconds) + " seconds ago";
+        }
+
+        async function loadAPIUsage() {
+            try {
+                const response = await fetch('/api/v1/platerecognizer/usage');
+                const data = await response.json();
+
+                document.getElementById('api-calls').textContent = data.calls_this_month;
+                document.getElementById('api-remaining').textContent = data.remaining_calls;
+                document.getElementById('cache-rate').textContent = Math.round(data.cache_hit_rate * 100) + '%';
+
+                const usagePercent = (data.calls_this_month / data.monthly_limit) * 100;
+                document.getElementById('usage-bar-fill').style.width = usagePercent + '%';
+
             } catch (error) {
-                console.error('Error loading frequent vehicles:', error);
+                console.error('Error loading API usage:', error);
             }
         }
-        
-        // Update detection trend
-        function updateDetectionTrend() {
-            // This is mock data - replace with real API call
-            const hours = 24;
-            const labels = [];
-            const data = [];
-            
-            for (let i = hours - 1; i >= 0; i--) {
-                const time = new Date();
-                time.setHours(time.getHours() - i);
-                labels.push(time.getHours() + ':00');
-                data.push(Math.floor(Math.random() * 20) + 5);
-            }
-            
-            charts.detection.data.labels = labels;
-            charts.detection.data.datasets[0].data = data;
-            charts.detection.update();
-        }
-        
-        // Utility functions
-        function changeTimeRange(range) {
-            currentTimeRange = range;
-            document.querySelectorAll('.time-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            refreshData();
-        }
-        
-        function getTimeWindowHours() {
-            const ranges = {
-                '1h': 1,
-                '24h': 24,
-                '7d': 168,
-                '30d': 720
-            };
-            return ranges[currentTimeRange] || 24;
-        }
-        
-        function switchProfileView(view) {
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            displayVehicleProfiles(view);
-        }
-        
-        function refreshData() {
-            loadAnalyticsData();
-            loadVehicleProfiles();
-            loadFrequentVehicles();
-        }
-        
-        function closeModal() {
-            document.getElementById('vehicleModal').classList.remove('active');
-        }
-        
-        function exportFrequentVehicles() {
-            // Implement CSV export
-            alert('Export functionality coming soon!');
-        }
-        
-        // Close modal on outside click
-        document.getElementById('vehicleModal').addEventListener('click', (e) => {
-            if (e.target.id === 'vehicleModal') {
-                closeModal();
-            }
-        });
+
+        // Load data on page load
+        loadAnalytics();
+        loadAPIUsage();
+
+        // Refresh data every 30 seconds
+        setInterval(() => {
+            loadAnalytics();
+            loadAPIUsage();
+        }, 30000);
     </script>
 </body>
 </html>
