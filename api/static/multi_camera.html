@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALPR Multi-Camera Surveillance</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(45deg, #4CAF50, #2196F3);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #333;
+            color: #e0e0e0;
+            border: 1px solid #555;
+        }
+        
+        .btn-secondary:hover {
+            background: #444;
+        }
+        
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 70px);
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: #1a1a1a;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+        }
+        
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+            margin-left: -300px;
+        }
+        
+        .sidebar-tab {
+            display: flex;
+            border-bottom: 1px solid #333;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 1rem;
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .tab-button.active {
+            color: #2196F3;
+            background: rgba(33, 150, 243, 0.1);
+            border-bottom: 2px solid #2196F3;
+        }
+        
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+        
+        /* Search Panel */
+        .search-panel {
+            display: none;
+        }
+        
+        .search-panel.active {
+            display: block;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 0.75rem;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #2196F3;
+            box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+        }
+        
+        .filter-section {
+            margin-bottom: 1.5rem;
+        }
+        
+        .filter-section h3 {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .filter-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+        
+        .filter-checkbox:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .filter-checkbox input {
+            cursor: pointer;
+        }
+        
+        /* Camera List Panel */
+        .camera-panel {
+            display: none;
+        }
+        
+        .camera-panel.active {
+            display: block;
+        }
+        
+        .camera-item {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .camera-item:hover {
+            border-color: #2196F3;
+            transform: translateX(5px);
+        }
+        
+        .camera-item.active {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .camera-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .camera-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+        
+        .camera-status.offline {
+            background: #f44336;
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .camera-info {
+            font-size: 0.85rem;
+            color: #888;
+        }
+        
+        /* Main Content Area */
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #0f0f0f;
+        }
+        
+        /* View Controls */
+        .view-controls {
+            background: #1a1a1a;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+        
+        .view-selector {
+            display: flex;
+            gap: 0.5rem;
+            background: #2a2a2a;
+            padding: 0.25rem;
+            border-radius: 4px;
+        }
+        
+        .view-option {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        
+        .view-option.active {
+            background: #333;
+            color: #e0e0e0;
+        }
+        
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.9rem;
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .stat-label {
+            color: #888;
+        }
+        
+        .stat-value {
+            font-weight: 600;
+            color: #4CAF50;
+        }
+        
+        /* Camera Grid */
+        .camera-grid {
+            flex: 1;
+            padding: 1rem;
+            display: grid;
+            gap: 1rem;
+            grid-auto-rows: minmax(200px, 1fr);
+            overflow-y: auto;
+        }
+        
+        .grid-1x1 { grid-template-columns: 1fr; }
+        .grid-2x2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-3x3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-4x4 { grid-template-columns: repeat(4, 1fr); }
+        
+        .camera-feed {
+            background: #1a1a1a;
+            border-radius: 8px;
+            border: 1px solid #333;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+        
+        .camera-feed:hover {
+            border-color: #2196F3;
+            transform: scale(1.02);
+        }
+        
+        .camera-feed.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1000;
+            margin: 0;
+            border-radius: 0;
+        }
+        
+        .feed-header {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+        
+        .feed-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .feed-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .feed-btn {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 4px;
+            color: #e0e0e0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        .feed-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .feed-video {
+            flex: 1;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .feed-video img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .feed-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        
+        .detection-info {
+            font-size: 0.85rem;
+        }
+        
+        .detection-plate {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #4CAF50;
+            margin-bottom: 0.25rem;
+        }
+        
+        .detection-time {
+            color: #888;
+            font-size: 0.8rem;
+        }
+        
+        /* Search Results */
+        .search-results {
+            position: fixed;
+            top: 70px;
+            right: 0;
+            bottom: 0;
+            width: 400px;
+            background: #1a1a1a;
+            border-left: 1px solid #333;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+        
+        .search-results.active {
+            transform: translateX(0);
+        }
+        
+        .results-header {
+            padding: 1rem;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .results-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+        
+        .result-item {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .result-item:hover {
+            border-color: #2196F3;
+        }
+        
+        .result-plate {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #4CAF50;
+            margin-bottom: 0.5rem;
+        }
+        
+        .result-details {
+            font-size: 0.85rem;
+            color: #888;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+        
+        .result-image {
+            width: 100%;
+            height: 120px;
+            background: #000;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .result-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .grid-4x4 { grid-template-columns: repeat(3, 1fr); }
+        }
+        
+        @media (max-width: 900px) {
+            .grid-3x3, .grid-4x4 { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        @media (max-width: 600px) {
+            .sidebar { width: 100%; position: fixed; z-index: 200; }
+            .sidebar.collapsed { transform: translateX(-100%); margin-left: 0; }
+            .grid-2x2, .grid-3x3, .grid-4x4 { grid-template-columns: 1fr; }
+            .search-results { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>ALPR Multi-Camera Surveillance</h1>
+        <div class="header-controls">
+            <button class="btn btn-secondary" onclick="toggleSidebar()">☰ Menu</button>
+            <button class="btn btn-primary" onclick="startAllCameras()">Start All Cameras</button>
+            <button class="btn btn-secondary" onclick="addCamera()">+ Add Camera</button>
+        </div>
+    </div>
+    
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-tab">
+                <button class="tab-button active" onclick="switchTab('search')">Search</button>
+                <button class="tab-button" onclick="switchTab('cameras')">Cameras</button>
+            </div>
+            
+            <div class="tab-content">
+                <!-- Search Panel -->
+                <div class="search-panel active" id="searchPanel">
+                    <input type="text" class="search-input" placeholder="Search by plate number..." 
+                           onkeyup="handleSearch(event)">
+                    
+                    <div class="filter-section">
+                        <h3>Time Range</h3>
+                        <div class="filter-group">
+                            <label class="filter-checkbox">
+                                <input type="radio" name="timeRange" value="1h" checked>
+                                <span>Last Hour</span>
+                            </label>
+                            <label class="filter-checkbox">
+                                <input type="radio" name="timeRange" value="24h">
+                                <span>Last 24 Hours</span>
+                            </label>
+                            <label class="filter-checkbox">
+                                <input type="radio" name="timeRange" value="7d">
+                                <span>Last 7 Days</span>
+                            </label>
+                            <label class="filter-checkbox">
+                                <input type="radio" name="timeRange" value="custom">
+                                <span>Custom Range</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-section">
+                        <h3>Vehicle Type</h3>
+                        <div class="filter-group">
+                            <label class="filter-checkbox">
+                                <input type="checkbox" name="vehicleType" value="sedan">
+                                <span>Sedan</span>
+                            </label>
+                            <label class="filter-checkbox">
+                                <input type="checkbox" name="vehicleType" value="suv">
+                                <span>SUV</span>
+                            </label>
+                            <label class="filter-checkbox">
+                                <input type="checkbox" name="vehicleType" value="truck">
+                                <span>Truck</span>
+                            </label>
+                            <label class="filter-checkbox">
+                                <input type="checkbox" name="vehicleType" value="van">
+                                <span>Van</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-section">
+                        <h3>Alerts</h3>
+                        <div class="filter-group">
+                            <label class="filter-checkbox">
+                                <input type="checkbox" name="alerts" value="no_plate">
+                                <span>No Plate Detected</span>
+                            </label>
+                            <label class="filter-checkbox">
+                                <input type="checkbox" name="alerts" value="plate_switch">
+                                <span>Plate Switch</span>
+                            </label>
+                            <label class="filter-checkbox">
+                                <input type="checkbox" name="alerts" value="loitering">
+                                <span>Loitering</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" 
+                            onclick="performSearch()">Search</button>
+                </div>
+                
+                <!-- Camera List Panel -->
+                <div class="camera-panel" id="cameraPanel">
+                    <div class="camera-item active" onclick="selectCamera('cam_01')">
+                        <div class="camera-name">
+                            <div class="camera-status"></div>
+                            Main Entrance
+                        </div>
+                        <div class="camera-info">Camera 01 • Active • 24 detections/hr</div>
+                    </div>
+                    
+                    <div class="camera-item" onclick="selectCamera('cam_02')">
+                        <div class="camera-name">
+                            <div class="camera-status"></div>
+                            Parking Lot A
+                        </div>
+                        <div class="camera-info">Camera 02 • Active • 18 detections/hr</div>
+                    </div>
+                    
+                    <div class="camera-item" onclick="selectCamera('cam_03')">
+                        <div class="camera-name">
+                            <div class="camera-status"></div>
+                            East Gate
+                        </div>
+                        <div class="camera-info">Camera 03 • Active • 12 detections/hr</div>
+                    </div>
+                    
+                    <div class="camera-item" onclick="selectCamera('cam_04')">
+                        <div class="camera-name">
+                            <div class="camera-status offline"></div>
+                            West Exit
+                        </div>
+                        <div class="camera-info">Camera 04 • Offline</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content Area -->
+        <div class="content-area">
+            <!-- View Controls -->
+            <div class="view-controls">
+                <div class="view-selector">
+                    <button class="view-option active" onclick="setGridLayout('2x2')">2×2</button>
+                    <button class="view-option" onclick="setGridLayout('3x3')">3×3</button>
+                    <button class="view-option" onclick="setGridLayout('4x4')">4×4</button>
+                    <button class="view-option" onclick="setGridLayout('1x1')">Single</button>
+                </div>
+                
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <span class="stat-label">Active Cameras:</span>
+                        <span class="stat-value" id="activeCameras">3/4</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Detections:</span>
+                        <span class="stat-value" id="totalDetections">156</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Active Alerts:</span>
+                        <span class="stat-value" id="activeAlerts" style="color: #ff9800;">2</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Camera Grid -->
+            <div class="camera-grid grid-2x2" id="cameraGrid">
+                <div class="camera-feed">
+                    <div class="feed-header">
+                        <span class="feed-title">Main Entrance</span>
+                        <div class="feed-controls">
+                            <button class="feed-btn" onclick="toggleRecording('cam_01')">⏺</button>
+                            <button class="feed-btn" onclick="toggleFullscreen('cam_01')">⛶</button>
+                        </div>
+                    </div>
+                    <div class="feed-video">
+                        <span>Connecting to Camera 01...</span>
+                    </div>
+                    <div class="feed-overlay">
+                        <div class="detection-info">
+                            <div class="detection-plate">ABC 1234</div>
+                            <div class="detection-time">2 seconds ago</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="camera-feed">
+                    <div class="feed-header">
+                        <span class="feed-title">Parking Lot A</span>
+                        <div class="feed-controls">
+                            <button class="feed-btn" onclick="toggleRecording('cam_02')">⏺</button>
+                            <button class="feed-btn" onclick="toggleFullscreen('cam_02')">⛶</button>
+                        </div>
+                    </div>
+                    <div class="feed-video">
+                        <span>Connecting to Camera 02...</span>
+                    </div>
+                    <div class="feed-overlay">
+                        <div class="detection-info">
+                            <div class="detection-plate">XYZ 789</div>
+                            <div class="detection-time">15 seconds ago</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="camera-feed">
+                    <div class="feed-header">
+                        <span class="feed-title">East Gate</span>
+                        <div class="feed-controls">
+                            <button class="feed-btn" onclick="toggleRecording('cam_03')">⏺</button>
+                            <button class="feed-btn" onclick="toggleFullscreen('cam_03')">⛶</button>
+                        </div>
+                    </div>
+                    <div class="feed-video">
+                        <span>Connecting to Camera 03...</span>
+                    </div>
+                    <div class="feed-overlay">
+                        <div class="detection-info">
+                            <div class="detection-plate">No recent detections</div>
+                            <div class="detection-time">--</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="camera-feed">
+                    <div class="feed-header">
+                        <span class="feed-title">West Exit</span>
+                        <div class="feed-controls">
+                            <button class="feed-btn" onclick="toggleRecording('cam_04')">⏺</button>
+                            <button class="feed-btn" onclick="toggleFullscreen('cam_04')">⛶</button>
+                        </div>
+                    </div>
+                    <div class="feed-video">
+                        <span style="color: #f44336;">Camera Offline</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Search Results Panel -->
+    <div class="search-results" id="searchResults">
+        <div class="results-header">
+            <h3>Search Results</h3>
+            <button class="btn btn-secondary" onclick="closeSearchResults()">×</button>
+        </div>
+        <div class="results-content" id="resultsContent">
+            <!-- Results will be populated here -->
+        </div>
+    </div>
+    
+    <script>
+        // WebSocket connection
+        let ws = null;
+        let activeCameras = new Set(['cam_01', 'cam_02', 'cam_03']);
+        let detectionStats = {
+            total: 156,
+            byCamera: {
+                'cam_01': 24,
+                'cam_02': 18,
+                'cam_03': 12,
+                'cam_04': 0
+            }
+        };
+        
+        // Initialize WebSocket
+        function initWebSocket() {
+            ws = new WebSocket('ws://localhost:8000/ws/surveillance');
+            
+            ws.onopen = () => {
+                console.log('Connected to surveillance WebSocket');
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+            
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                // Retry connection after 3 seconds
+                setTimeout(initWebSocket, 3000);
+            };
+        }
+        
+        // Handle WebSocket messages
+        function handleWebSocketMessage(data) {
+            if (data.type === 'detection') {
+                updateDetection(data.data);
+            } else if (data.type === 'anomaly_alert') {
+                showAlert(data.data);
+            } else if (data.type === 'stats_update') {
+                updateStats(data.data);
+            }
+        }
+        
+        // Update detection display
+        function updateDetection(detection) {
+            // Update camera feed with latest detection
+            // This is a placeholder - integrate with actual video feed
+            console.log('New detection:', detection);
+            
+            // Update total detections
+            detectionStats.total++;
+            document.getElementById('totalDetections').textContent = detectionStats.total;
+        }
+        
+        // Show anomaly alert
+        function showAlert(alert) {
+            console.log('New alert:', alert);
+            // Update alert count
+            const alertCount = parseInt(document.getElementById('activeAlerts').textContent) + 1;
+            document.getElementById('activeAlerts').textContent = alertCount;
+        }
+        
+        // Update statistics
+        function updateStats(stats) {
+            if (stats.tracking_stats) {
+                // Update UI with tracking statistics
+                console.log('Stats update:', stats);
+            }
+        }
+        
+        // Toggle sidebar
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        }
+        
+        // Switch tabs
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelectorAll('.search-panel, .camera-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            
+            if (tab === 'search') {
+                document.querySelector('.tab-button:first-child').classList.add('active');
+                document.getElementById('searchPanel').classList.add('active');
+            } else {
+                document.querySelector('.tab-button:last-child').classList.add('active');
+                document.getElementById('cameraPanel').classList.add('active');
+            }
+        }
+        
+        // Set grid layout
+        function setGridLayout(layout) {
+            const grid = document.getElementById('cameraGrid');
+            grid.className = `camera-grid grid-${layout}`;
+            
+            document.querySelectorAll('.view-option').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+        
+        // Start all cameras
+        async function startAllCameras() {
+            try {
+                const response = await fetch('/api/v1/surveillance/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({video_source: '0'})
+                });
+                
+                if (response.ok) {
+                    console.log('Surveillance started');
+                    // Update UI to show cameras are active
+                }
+            } catch (error) {
+                console.error('Error starting surveillance:', error);
+            }
+        }
+        
+        // Add new camera
+        function addCamera() {
+            // Show camera configuration modal
+            alert('Camera configuration UI coming soon!');
+        }
+        
+        // Select camera
+        function selectCamera(cameraId) {
+            document.querySelectorAll('.camera-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            // Focus on selected camera in grid
+            // Implementation depends on your camera switching logic
+        }
+        
+        // Toggle fullscreen for camera
+        function toggleFullscreen(cameraId) {
+            const feed = event.target.closest('.camera-feed');
+            feed.classList.toggle('fullscreen');
+        }
+        
+        // Toggle recording
+        function toggleRecording(cameraId) {
+            const btn = event.target;
+            btn.style.color = btn.style.color === 'red' ? '#e0e0e0' : 'red';
+            // Implement actual recording logic
+        }
+        
+        // Handle search input
+        function handleSearch(event) {
+            if (event.key === 'Enter') {
+                performSearch();
+            }
+        }
+        
+        // Perform search
+        async function performSearch() {
+            const searchValue = document.querySelector('.search-input').value;
+            const timeRange = document.querySelector('input[name="timeRange"]:checked').value;
+            
+            // Get selected vehicle types
+            const vehicleTypes = [];
+            document.querySelectorAll('input[name="vehicleType"]:checked').forEach(cb => {
+                vehicleTypes.push(cb.value);
+            });
+            
+            // Get selected alerts
+            const alerts = [];
+            document.querySelectorAll('input[name="alerts"]:checked').forEach(cb => {
+                alerts.push(cb.value);
+            });
+            
+            // Build search parameters
+            const params = new URLSearchParams({
+                plate: searchValue,
+                timeRange: timeRange
+            });
+            
+            if (vehicleTypes.length > 0) {
+                params.append('vehicleTypes', vehicleTypes.join(','));
+            }
+            
+            if (alerts.length > 0) {
+                params.append('alerts', alerts.join(','));
+            }
+            
+            try {
+                // This would call your actual search API
+                console.log('Searching with params:', params.toString());
+                
+                // Show search results panel
+                document.getElementById('searchResults').classList.add('active');
+                
+                // Mock results for demo
+                const mockResults = [
+                    {
+                        plate: 'ABC 1234',
+                        vehicle: 'Toyota Camry',
+                        color: 'Silver',
+                        lastSeen: '5 minutes ago',
+                        camera: 'Main Entrance',
+                        image: null
+                    },
+                    {
+                        plate: 'XYZ 789',
+                        vehicle: 'Honda CR-V',
+                        color: 'Black',
+                        lastSeen: '15 minutes ago',
+                        camera: 'Parking Lot A',
+                        image: null
+                    }
+                ];
+                
+                displaySearchResults(mockResults);
+                
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+        }
+        
+        // Display search results
+        function displaySearchResults(results) {
+            const container = document.getElementById('resultsContent');
+            container.innerHTML = '';
+            
+            results.forEach(result => {
+                const item = document.createElement('div');
+                item.className = 'result-item';
+                item.innerHTML = `
+                    <div class="result-plate">${result.plate}</div>
+                    <div class="result-details">
+                        <div>Vehicle: ${result.vehicle}</div>
+                        <div>Color: ${result.color}</div>
+                        <div>Last Seen: ${result.lastSeen}</div>
+                        <div>Camera: ${result.camera}</div>
+                    </div>
+                    ${result.image ? `<div class="result-image"><img src="${result.image}" alt="Plate"></div>` : ''}
+                `;
+                container.appendChild(item);
+            });
+        }
+        
+        // Close search results
+        function closeSearchResults() {
+            document.getElementById('searchResults').classList.remove('active');
+        }
+        
+        // Initialize on load
+        window.onload = () => {
+            initWebSocket();
+        };
+    </script>
+</body>
+</html>
