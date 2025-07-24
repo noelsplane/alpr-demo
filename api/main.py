@@ -28,6 +28,7 @@ from plate_filter_utils import extract_plate_number, detect_state_from_context
 import logging
 import requests
 from dotenv import load_dotenv
+from camera_detector import camera_detector, get_available_cameras, get_working_cameras
 from platerecognizer_manager import pr_manager
 import json
 from difflib import SequenceMatcher
@@ -38,6 +39,7 @@ from websocket_manager import manager
 from realtime_processor import RealtimeVideoProcessor
 from fastapi import Query
 from collections import defaultdict
+from search_utils import VehicleSearchEngine
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -782,7 +784,8 @@ async def video_feed():
 @app.post("/api/v1/surveillance/process-frame")
 async def process_browser_frame(
     frame: UploadFile = File(...),
-    frame_id: str = Form(...)
+    frame_id: str = Form(...),
+    camera_id: str = Form(default="browser_camera")
 ):
     """Process a frame sent from the browser."""
     global realtime_processor, current_session_id
@@ -808,6 +811,11 @@ async def process_browser_frame(
         # Process the frame directly
         detections = realtime_processor.frame_processor._process_frame(img)
         
+        # Ensure each detection has the correct camera_id
+        if detections:
+            for detection in detections:
+                detection['camera_id'] = camera_id
+        
         if detections and current_session_id:
             # Save detections to database
             db = get_db()
@@ -821,7 +829,8 @@ async def process_browser_frame(
                         state_confidence=detection.get('state_confidence', 0),
                         frame_id=frame_id,
                         plate_image_base64=detection.get('plate_image_base64'),
-                        detection_time=datetime.now()
+                        detection_time=datetime.now(),
+                        camera_id=camera_id
                     )
                     db.add(session_detection)
                 db.commit()
@@ -1394,17 +1403,26 @@ async def search_vehicles(
     startDate: Optional[str] = Query(None, description="Start date for custom range"),
     endDate: Optional[str] = Query(None, description="End date for custom range"),
     vehicleTypes: Optional[str] = Query(None, description="Comma-separated vehicle types"),
+    vehicleMakes: Optional[str] = Query(None, description="Comma-separated vehicle makes"),
+    vehicleColors: Optional[str] = Query(None, description="Comma-separated vehicle colors"),
+    states: Optional[str] = Query(None, description="Comma-separated state codes"),
     alerts: Optional[str] = Query(None, description="Comma-separated alert types"),
     cameras: Optional[str] = Query(None, description="Comma-separated camera IDs"),
+    includeNoPlate: bool = Query(False, description="Include vehicles without recognizable plates"),
+    hasAnomalies: Optional[bool] = Query(None, description="Filter by presence of anomalies"),
+    confidenceThreshold: float = Query(0.0, description="Minimum confidence threshold"),
     limit: int = Query(50, description="Maximum results to return"),
     offset: int = Query(0, description="Offset for pagination")
 ):
     """
-    Search for vehicles based on various criteria.
+    Search for vehicles based on various criteria across all detection sources.
+    Now includes vehicles without recognizable plates when requested.
     """
     db = get_db()
     try:
-        # Apply time range filter
+        search_engine = VehicleSearchEngine(db)
+        
+        # Parse time range
         end_time = datetime.now()
         if timeRange == "1h":
             start_time = end_time - timedelta(hours=1)
@@ -1420,190 +1438,41 @@ async def search_vehicles(
         else:
             start_time = end_time - timedelta(hours=24)
         
-        # Query regular detections
-        regular_query = db.query(PlateDetection)
+        # Parse filter parameters
+        vehicle_types_list = vehicleTypes.split(',') if vehicleTypes else None
+        vehicle_makes_list = vehicleMakes.split(',') if vehicleMakes else None
+        vehicle_colors_list = vehicleColors.split(',') if vehicleColors else None
+        states_list = states.split(',') if states else None
+        cameras_list = cameras.split(',') if cameras else None
+        alert_types_list = alerts.split(',') if alerts else None
         
-        # Apply plate filter
-        if plate:
-            regular_query = regular_query.filter(PlateDetection.plate_text.ilike(f"%{plate}%"))
+        # Perform unified search
+        results, total_count = search_engine.search_vehicles(
+            plate_text=plate,
+            start_time=start_time,
+            end_time=end_time,
+            vehicle_types=vehicle_types_list,
+            vehicle_makes=vehicle_makes_list,
+            vehicle_colors=vehicle_colors_list,
+            states=states_list,
+            cameras=cameras_list,
+            has_anomalies=hasAnomalies,
+            anomaly_types=alert_types_list,
+            confidence_threshold=confidenceThreshold,
+            limit=limit,
+            offset=offset,
+            include_no_plate_vehicles=includeNoPlate
+        )
         
-        regular_query = regular_query.filter(PlateDetection.timestamp.between(start_time, end_time))
-        
-        # Apply vehicle type filter
-        if vehicleTypes:
-            types = vehicleTypes.split(',')
-            regular_query = regular_query.filter(PlateDetection.vehicle_type.in_(types))
-        
-        # Apply camera filter
-        if cameras:
-            camera_list = cameras.split(',')
-            regular_query = regular_query.filter(PlateDetection.camera_id.in_(camera_list))
-        
-        # Query session detections
-        session_query = db.query(SessionDetection)
-        
-        if plate:
-            session_query = session_query.filter(SessionDetection.plate_text.ilike(f"%{plate}%"))
-        
-        session_query = session_query.filter(SessionDetection.detection_time.between(start_time, end_time))
-        
-        if vehicleTypes:
-            types = vehicleTypes.split(',')
-            session_query = session_query.filter(SessionDetection.vehicle_type.in_(types))
-        
-        # Get total count from both sources
-        regular_count = regular_query.count()
-        session_count = session_query.count()
-        total_count = regular_count + session_count
-        
-        # Apply pagination to both queries
-        # Split limit between both sources proportionally
-        if regular_count > 0 and session_count > 0:
-            regular_ratio = regular_count / total_count
-            regular_limit = max(1, int(limit * regular_ratio))
-            session_limit = limit - regular_limit
-        elif regular_count > 0:
-            regular_limit = limit
-            session_limit = 0
-        else:
-            regular_limit = 0
-            session_limit = limit
-        
-        # Get regular detections
-        regular_detections = regular_query.order_by(PlateDetection.timestamp.desc())\
-                                        .offset(offset)\
-                                        .limit(regular_limit)\
-                                        .all()
-        
-        # Get session detections
-        session_detections = session_query.order_by(SessionDetection.detection_time.desc())\
-                                        .offset(max(0, offset - regular_count))\
-                                        .limit(session_limit)\
-                                        .all()
-        
-        # Merge and format results
-        results = []
-        seen_plates_timestamps = set()  # To avoid duplicates
-        
-        # Process regular detections
-        for detection in regular_detections:
-            key = f"{detection.plate_text}_{detection.timestamp.isoformat()}"
-            if key not in seen_plates_timestamps:
-                seen_plates_timestamps.add(key)
-                result = {
-                    'id': detection.id,
-                    'plate_text': detection.plate_text,
-                    'confidence': detection.confidence,
-                    'timestamp': detection.timestamp.isoformat(),
-                    'camera_id': detection.camera_id,
-                    'image_name': detection.image_name,
-                    'plate_image': detection.plate_image_base64,
-                    'vehicle': {
-                        'type': detection.vehicle_type,
-                        'make': detection.vehicle_make,
-                        'model': detection.vehicle_model,
-                        'color': detection.vehicle_color,
-                        'year': detection.vehicle_year
-                    },
-                    'state': detection.state,
-                    'state_confidence': detection.state_confidence,
-                    'detection_source': 'regular',
-                    'alerts': []
-                }
-                results.append(result)
-        
-        # Process session detections
-        for detection in session_detections:
-            key = f"{detection.plate_text}_{detection.detection_time.isoformat()}"
-            if key not in seen_plates_timestamps:
-                seen_plates_timestamps.add(key)
-                
-                # Get session info
-                session_info = db.query(SurveillanceSession).filter(
-                    SurveillanceSession.id == detection.session_id
-                ).first()
-                
-                result = {
-                    'id': f"session_{detection.id}",
-                    'plate_text': detection.plate_text,
-                    'confidence': detection.confidence,
-                    'timestamp': detection.detection_time.isoformat(),
-                    'camera_id': 'surveillance_camera',  # Default camera ID for sessions
-                    'session_id': detection.session_id,
-                    'session_status': session_info.status if session_info else 'unknown',
-                    'frame_id': detection.frame_id,
-                    'plate_image': detection.plate_image_base64,
-                    'vehicle': {
-                        'type': detection.vehicle_type,
-                        'make': detection.vehicle_make,
-                        'model': detection.vehicle_model,
-                        'color': detection.vehicle_color,
-                        'year': None  # Session detection doesn't have year field
-                    },
-                    'state': detection.state,
-                    'state_confidence': detection.state_confidence,
-                    'detection_source': 'session',
-                    'alerts': []
-                }
-                results.append(result)
-        
-        # Sort all results by timestamp
-        results.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-        # Check for anomalies if alerts filter is specified
-        if alerts and results:
-            alert_types = alerts.split(',')
-            plate_texts = [r['plate_text'] for r in results if r['plate_text']]
-            
-            # Query anomalies for these vehicles
-            vehicle_anomalies = db.query(VehicleAnomaly).filter(
-                VehicleAnomaly.plate_text.in_(plate_texts),
-                VehicleAnomaly.anomaly_type.in_(alert_types),
-                VehicleAnomaly.detected_time.between(start_time, end_time)
-            ).all()
-            
-            # Group anomalies by plate
-            anomaly_map = defaultdict(list)
-            for anomaly in vehicle_anomalies:
-                anomaly_map[anomaly.plate_text].append({
-                    'type': anomaly.anomaly_type,
-                    'severity': anomaly.severity,
-                    'timestamp': anomaly.detected_time.isoformat(),
-                    'message': anomaly.message
-                })
-            
-            # Add anomalies to results
-            for result in results:
-                if result['plate_text'] in anomaly_map:
-                    result['alerts'] = anomaly_map[result['plate_text']]
-        
-        # Also check for session alerts
-        if alerts and results:
-            session_ids = [r.get('session_id') for r in results if r.get('session_id')]
-            if session_ids:
-                session_alerts = db.query(SessionAlert).filter(
-                    SessionAlert.session_id.in_(session_ids),
-                    SessionAlert.alert_type.in_(alert_types),
-                    SessionAlert.alert_time.between(start_time, end_time)
-                ).all()
-                
-                # Group alerts by session
-                session_alert_map = defaultdict(list)
-                for alert in session_alerts:
-                    session_alert_map[alert.session_id].append({
-                        'type': alert.alert_type,
-                        'severity': alert.severity,
-                        'timestamp': alert.alert_time.isoformat(),
-                        'message': alert.message
-                    })
-                
-                # Add session alerts to results
-                for result in results:
-                    if result.get('session_id') in session_alert_map:
-                        result['alerts'].extend(session_alert_map[result['session_id']])
+        # Count results by source
+        source_counts = {
+            'upload_detections': len([r for r in results if r.get('source') == 'upload']),
+            'surveillance_detections': len([r for r in results if r.get('source') == 'surveillance']),
+            'no_plate_vehicles': len([r for r in results if r.get('source') == 'no_plate_vehicle'])
+        }
         
         return JSONResponse(content={
-            'results': results[:limit],  # Ensure we don't exceed limit
+            'results': results,
             'total': total_count,
             'limit': limit,
             'offset': offset,
@@ -1611,17 +1480,81 @@ async def search_vehicles(
                 'plate': plate,
                 'timeRange': timeRange,
                 'vehicleTypes': vehicleTypes,
+                'vehicleMakes': vehicleMakes,
+                'vehicleColors': vehicleColors,
+                'states': states,
                 'alerts': alerts,
-                'cameras': cameras
+                'cameras': cameras,
+                'includeNoPlate': includeNoPlate,
+                'hasAnomalies': hasAnomalies,
+                'confidenceThreshold': confidenceThreshold
             },
-            'source_counts': {
-                'regular_detections': regular_count,
-                'session_detections': session_count
-            }
+            'source_counts': source_counts
         })
         
     except Exception as e:
         logger.error(f"Error searching vehicles: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    finally:
+        db.close()
+
+@app.get("/api/v1/search/no-plate-vehicles")
+async def get_no_plate_vehicles(
+    timeRange: str = Query("24h", description="Time range: 1h, 24h, 7d, 30d"),
+    vehicleTypes: Optional[str] = Query(None, description="Comma-separated vehicle types"),
+    limit: int = Query(50, description="Maximum results to return"),
+    offset: int = Query(0, description="Offset for pagination")
+):
+    """
+    Get vehicles detected without recognizable license plates.
+    """
+    db = get_db()
+    try:
+        search_engine = VehicleSearchEngine(db)
+        
+        # Parse time range
+        end_time = datetime.now()
+        if timeRange == "1h":
+            start_time = end_time - timedelta(hours=1)
+        elif timeRange == "24h":
+            start_time = end_time - timedelta(hours=24)
+        elif timeRange == "7d":
+            start_time = end_time - timedelta(days=7)
+        elif timeRange == "30d":
+            start_time = end_time - timedelta(days=30)
+        else:
+            start_time = end_time - timedelta(hours=24)
+        
+        # Parse vehicle types
+        vehicle_types_list = vehicleTypes.split(',') if vehicleTypes else None
+        
+        # Get vehicles without plates
+        results, total_count = search_engine.search_vehicles(
+            plate_text=None,  # We're looking for vehicles without plates
+            start_time=start_time,
+            end_time=end_time,
+            vehicle_types=vehicle_types_list,
+            limit=limit,
+            offset=offset,
+            include_no_plate_vehicles=True
+        )
+        
+        # Filter to only no-plate vehicles
+        no_plate_results = [r for r in results if r.get('source') == 'no_plate_vehicle']
+        
+        return JSONResponse(content={
+            'no_plate_vehicles': no_plate_results,
+            'total': len(no_plate_results),
+            'limit': limit,
+            'offset': offset,
+            'filters': {
+                'timeRange': timeRange,
+                'vehicleTypes': vehicleTypes
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting no-plate vehicles: {e}")
         return JSONResponse(content={"error": str(e)}, status_code=500)
     finally:
         db.close()
@@ -1794,12 +1727,19 @@ async def get_search_analytics(
         
         active_anomalies = active_anomaly_count + active_session_alerts
         
+        # 5. No-plate vehicles count
+        no_plate_count = db.query(func.count(VehicleAnomaly.id)).filter(
+            VehicleAnomaly.anomaly_type.in_(['NO_PLATE_VEHICLE', 'SUSPICIOUS_NO_PLATE']),
+            VehicleAnomaly.detected_time.between(start_time, end_time)
+        ).scalar() or 0
+        
         return JSONResponse(content={
             'analytics': {
                 'suspicious_vehicles': suspicious_count,
                 'frequent_visitors': frequent_count,
                 'recent_detections': recent_count,
-                'active_anomalies': active_anomalies
+                'active_anomalies': active_anomalies,
+                'no_plate_vehicles': no_plate_count
             },
             'time_range': timeRange,
             'filters': {
@@ -1849,6 +1789,171 @@ async def get_cameras():
         return JSONResponse(content={"error": str(e)}, status_code=500)
     finally:
         db.close()
+
+
+@app.get("/api/v1/cameras/detect")
+async def detect_available_cameras():
+    """Detect all available cameras on the system including USB cameras."""
+    try:
+        # Refresh camera detection
+        cameras = camera_detector.detect_all_cameras()
+        
+        camera_data = []
+        for camera in cameras:
+            camera_data.append({
+                'index': camera.index,
+                'name': camera.name,
+                'device_path': camera.device_path,
+                'resolution': f"{camera.resolution[0]}x{camera.resolution[1]}" if camera.resolution else None,
+                'fps': camera.fps,
+                'is_working': camera.is_working,
+                'connection_type': camera.connection_type
+            })
+        
+        return JSONResponse(content={
+            'cameras': camera_data,
+            'total_detected': len(cameras),
+            'working_cameras': len([c for c in cameras if c.is_working])
+        })
+        
+    except Exception as e:
+        logger.error(f"Error detecting cameras: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.get("/api/v1/cameras/working")
+async def get_working_cameras():
+    """Get only cameras that are confirmed to be working."""
+    try:
+        working_cameras = camera_detector.get_working_cameras()
+        
+        camera_data = []
+        for camera in working_cameras:
+            camera_data.append({
+                'index': camera.index,
+                'name': camera.name,
+                'device_path': camera.device_path,
+                'resolution': f"{camera.resolution[0]}x{camera.resolution[1]}" if camera.resolution else None,
+                'fps': camera.fps,
+                'connection_type': camera.connection_type
+            })
+        
+        return JSONResponse(content={
+            'cameras': camera_data,
+            'count': len(working_cameras)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting working cameras: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.get("/api/v1/cameras/best")
+async def get_best_camera():
+    """Get the best available camera (highest resolution, working)."""
+    try:
+        best_camera = camera_detector.get_best_camera()
+        
+        if not best_camera:
+            return JSONResponse(content={"error": "No working cameras found"}, status_code=404)
+        
+        return JSONResponse(content={
+            'camera': {
+                'index': best_camera.index,
+                'name': best_camera.name,
+                'device_path': best_camera.device_path,
+                'resolution': f"{best_camera.resolution[0]}x{best_camera.resolution[1]}" if best_camera.resolution else None,
+                'fps': best_camera.fps,
+                'connection_type': best_camera.connection_type
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting best camera: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+@app.post("/api/v1/cameras/{camera_index}/test")
+async def test_camera_connection(camera_index: int):
+    """Test connection to a specific camera by index."""
+    try:
+        import cv2
+        
+        cap = cv2.VideoCapture(camera_index)
+        if not cap.isOpened():
+            return JSONResponse(content={
+                "camera_index": camera_index,
+                "working": False,
+                "error": "Camera could not be opened"
+            }, status_code=400)
+        
+        # Try to read a frame
+        ret, frame = cap.read()
+        cap.release()
+        
+        if not ret or frame is None:
+            return JSONResponse(content={
+                "camera_index": camera_index,
+                "working": False,
+                "error": "Could not read frame from camera"
+            }, status_code=400)
+        
+        # Get camera info if available
+        camera_info = camera_detector.get_camera_by_index(camera_index)
+        
+        response_data = {
+            "camera_index": camera_index,
+            "working": True,
+            "frame_shape": frame.shape,
+            "message": "Camera is working properly"
+        }
+        
+        if camera_info:
+            response_data.update({
+                "name": camera_info.name,
+                "connection_type": camera_info.connection_type,
+                "resolution": f"{camera_info.resolution[0]}x{camera_info.resolution[1]}" if camera_info.resolution else None
+            })
+        
+        return JSONResponse(content=response_data)
+        
+    except Exception as e:
+        logger.error(f"Error testing camera {camera_index}: {e}")
+        return JSONResponse(content={
+            "camera_index": camera_index,
+            "working": False,
+            "error": str(e)
+        }, status_code=500)
+
+
+@app.post("/api/v1/cameras/refresh")
+async def refresh_camera_detection():
+    """Refresh camera detection to find newly connected cameras."""
+    try:
+        cameras = camera_detector.refresh_cameras()
+        
+        camera_data = []
+        for camera in cameras:
+            camera_data.append({
+                'index': camera.index,
+                'name': camera.name,
+                'device_path': camera.device_path,
+                'resolution': f"{camera.resolution[0]}x{camera.resolution[1]}" if camera.resolution else None,
+                'fps': camera.fps,
+                'is_working': camera.is_working,
+                'connection_type': camera.connection_type
+            })
+        
+        return JSONResponse(content={
+            'cameras': camera_data,
+            'total_detected': len(cameras),
+            'working_cameras': len([c for c in cameras if c.is_working]),
+            'message': 'Camera detection refreshed successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error refreshing camera detection: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
 @app.post("/api/v1/cameras/{camera_id}/stream")
@@ -2013,6 +2118,102 @@ async def get_frequent_vehicles(
     except Exception as e:
         logger.error(f"Error getting frequent vehicles: {e}")
         return JSONResponse(content={"error": str(e)}, status_code=500)
+    finally:
+        db.close()
+
+@app.get("/api/v1/detections/timeline")
+async def get_detections_timeline(days: int = 7):
+    """Get detection counts by day for timeline chart."""
+    db = get_db()
+    try:
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+        
+        # Query daily counts
+        daily_counts = db.query(
+            func.date(PlateDetection.timestamp).label('date'),
+            func.count(PlateDetection.id).label('count')
+        ).filter(
+            PlateDetection.timestamp.between(start_date, end_date)
+        ).group_by(
+            func.date(PlateDetection.timestamp)
+        ).order_by('date').all()
+        
+        # Format timeline data
+        timeline = []
+        current_date = start_date.date()
+        
+        # Create a dict for easy lookup
+        count_dict = {str(row.date): row.count for row in daily_counts}
+        
+        # Fill in all days including zeros
+        while current_date <= end_date.date():
+            timeline.append({
+                'date': current_date.isoformat(),
+                'count': count_dict.get(str(current_date), 0)
+            })
+            current_date += timedelta(days=1)
+        
+        return JSONResponse(content={
+            'success': True,
+            'timeline': timeline
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting detection timeline: {e}")
+        return JSONResponse(content={'success': False, 'error': str(e)}, status_code=500)
+    finally:
+        db.close()
+
+@app.get("/api/v1/detections/stats")
+async def get_detection_stats():
+    """Get detection statistics for analytics."""
+    db = get_db()
+    try:
+        # Get total detections
+        total_detections = db.query(func.count(PlateDetection.id)).scalar()
+        
+        # Get daily counts for last 7 days
+        daily_counts = []
+        for i in range(7):
+            date = datetime.now().date() - timedelta(days=i)
+            count = db.query(func.count(PlateDetection.id)).filter(
+                func.date(PlateDetection.timestamp) == date
+            ).scalar()
+            daily_counts.append(count)
+        
+        daily_counts.reverse()  # Oldest to newest
+        
+        return JSONResponse(content={
+            'total_detections': total_detections,
+            'daily_counts': daily_counts
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting detection stats: {e}")
+        return JSONResponse(content={'error': str(e)}, status_code=500)
+    finally:
+        db.close()
+
+@app.get("/api/v1/search/autocomplete")
+async def autocomplete_plates(
+    q: str = Query(..., description="Search query"),
+    limit: int = Query(10, description="Maximum results")
+):
+    """Autocomplete for license plate search."""
+    db = get_db()
+    try:
+        plates = db.query(PlateDetection.plate_text).filter(
+            PlateDetection.plate_text.ilike(f"{q}%")
+        ).distinct().limit(limit).all()
+        
+        return JSONResponse(content={
+            'suggestions': [p[0] for p in plates if p[0]]
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in autocomplete: {e}")
+        return JSONResponse(content={'error': str(e)}, status_code=500)
     finally:
         db.close()
 

@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-24T12:47:28.484062",
+  "result": [
+    {
+      "plate": "vgt751",
+      "state": null,
+      "state_confidence": 0,
+      "vehicle": {
+        "type": "Unknown",
+        "type_confidence": 0.0,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 10,
+        "ymin": 10,
+        "xmax": 414,
+        "ymax": 215
+      }
+    }
+  ]
+}

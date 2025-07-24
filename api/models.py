@@ -19,7 +19,7 @@ class PlateDetection(Base):
     plate_image_base64 = Column(Text)
     state = Column(String, nullable=True)
     state_confidence = Column(Float, default=0.0)
-    
+    camera_id = Column(String, nullable=True, default='default_camera')
     # New vehicle attribute fields
     vehicle_type = Column(String, nullable=True)
     vehicle_type_confidence = Column(Float, default=0.0)
@@ -58,6 +58,7 @@ class SessionDetection(Base):
     detection_time = Column(DateTime, default=datetime.utcnow)
     frame_id = Column(String, nullable=True)
     plate_image_base64 = Column(Text)
+    camera_id = Column(String, nullable=True)  # Added camera_id field
     
     # Vehicle attributes if detected
     vehicle_type = Column(String, nullable=True)

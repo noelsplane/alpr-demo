@@ -593,6 +593,28 @@
             background: #1a1a2e;
         }
 
+        .camera-status {
+            font-size: 0.9rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 5px;
+            margin-left: 0.5rem;
+        }
+
+        .camera-status.detecting {
+            color: #fbbf24;
+            background: rgba(251, 191, 36, 0.1);
+        }
+
+        .camera-status.success {
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .camera-status.error {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
         /* Loading and empty states */
         .loading {
             display: inline-block;
@@ -684,7 +706,7 @@
                 <li><a href="/ui/">Upload</a></li>
                 <li><a href="/ui/analytics.html">Analytics</a></li>
                 <li><a href="/ui/surveillance.html">Surveillance</a></li>
-                <li><a href="/ui/search.html">Search</a></li>
+                <li><a href="/ui/history.html">History</a></li>
             </ul>
         </div>
     </nav>
@@ -709,9 +731,13 @@
                         <option value="0">Default Camera</option>
                         <option value="browser_stream">Browser Camera</option>
                     </select>
-                    <button class="btn btn-primary" onclick="refreshCameras()">
+                    <button class="btn btn-primary" onclick="detectCameras()">
+                        Detect Cameras
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshCameras()">
                         Refresh
                     </button>
+                    <span id="camera-status" class="camera-status"></span>
                 </div>
 
                 <div class="video-container">
@@ -1151,6 +1177,89 @@
                 
             } catch (error) {
                 console.error('Error refreshing cameras:', error);
+            }
+        }
+        
+        async function detectCameras() {
+            console.log('Detecting cameras...');
+            const statusEl = document.getElementById('camera-status');
+            const selectEl = document.getElementById('camera-select');
+            
+            try {
+                statusEl.textContent = 'Detecting cameras...';
+                statusEl.className = 'camera-status detecting';
+                
+                const response = await fetch('/api/v1/cameras/detect');
+                const data = await response.json();
+                
+                if (response.ok && data.cameras) {
+                    // Clear existing options except browser camera
+                    selectEl.innerHTML = '<option value="browser_stream">Browser Camera</option>';
+                    
+                    // Add detected cameras
+                    data.cameras.forEach(camera => {
+                        const option = document.createElement('option');
+                        option.value = camera.index;
+                        
+                        let name = camera.name;
+                        if (camera.resolution) {
+                            name += ` (${camera.resolution})`;
+                        }
+                        if (!camera.is_working) {
+                            name += ' [Not Working]';
+                        }
+                        
+                        option.textContent = name;
+                        option.disabled = !camera.is_working;
+                        selectEl.appendChild(option);
+                    });
+                    
+                    statusEl.textContent = `Found ${data.total_detected} cameras (${data.working_cameras} working)`;
+                    statusEl.className = 'camera-status success';
+                    
+                    // Auto-select best working camera
+                    if (data.working_cameras > 0) {
+                        const workingCameras = data.cameras.filter(c => c.is_working);
+                        if (workingCameras.length > 0) {
+                            // Select the first working camera that's not the default
+                            const bestCamera = workingCameras.find(c => c.index !== 0) || workingCameras[0];
+                            selectEl.value = bestCamera.index;
+                        }
+                    }
+                    
+                    console.log('Camera detection completed:', data);
+                    
+                } else {
+                    throw new Error(data.error || 'Failed to detect cameras');
+                }
+                
+            } catch (error) {
+                console.error('Error detecting cameras:', error);
+                statusEl.textContent = 'Error detecting cameras';
+                statusEl.className = 'camera-status error';
+            }
+        }
+        
+        async function testCamera(cameraIndex) {
+            console.log(`Testing camera ${cameraIndex}...`);
+            
+            try {
+                const response = await fetch(`/api/v1/cameras/${cameraIndex}/test`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.working) {
+                    console.log(`Camera ${cameraIndex} is working:`, data);
+                    return true;
+                } else {
+                    console.warn(`Camera ${cameraIndex} test failed:`, data.error);
+                    return false;
+                }
+                
+            } catch (error) {
+                console.error(`Error testing camera ${cameraIndex}:`, error);
+                return false;
             }
         }
 

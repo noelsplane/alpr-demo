@@ -12,6 +12,7 @@ from sqlalchemy import create_engine, func, and_, or_
 from sqlalchemy.orm import sessionmaker
 from models import PlateDetection
 from vehicle_matcher import VehicleMatcher
+from database_config import db_config
 
 logger = logging.getLogger(__name__)
 
@@ -185,9 +186,12 @@ class VehicleProfile:
 class VehicleProfileAggregator:
     """Manages vehicle profiles and aggregates detections."""
     
-    def __init__(self, db_path: str = 'sqlite:///detections.db'):
-        self.engine = create_engine(db_path)
-        self.SessionLocal = sessionmaker(bind=self.engine)
+    def __init__(self, db_session=None):
+        if db_session:
+            self.SessionLocal = lambda: db_session
+        else:
+            self.engine = db_config.init_engine()
+            self.SessionLocal = db_config.SessionLocal
         self.vehicle_matcher = VehicleMatcher()
         self.profiles: Dict[str, VehicleProfile] = {}
         self._profile_index: Dict[str, str] = {}  # Maps plate_text to profile_id
@@ -403,18 +407,16 @@ class VehicleProfileAggregator:
 
 
 # Convenience functions
-def build_vehicle_profiles(db_path: str = 'sqlite:///detections.db', 
-                         time_window_hours: Optional[int] = None) -> VehicleProfileAggregator:
+def build_vehicle_profiles(time_window_hours: Optional[int] = None) -> VehicleProfileAggregator:
     """Build vehicle profiles from detection history."""
-    aggregator = VehicleProfileAggregator(db_path)
+    aggregator = VehicleProfileAggregator()
     aggregator.build_profiles(time_window_hours)
     return aggregator
 
 
-def get_vehicle_profile(plate_text: str, 
-                       db_path: str = 'sqlite:///detections.db') -> Optional[Dict]:
+def get_vehicle_profile(plate_text: str) -> Optional[Dict]:
     """Get vehicle profile for a specific plate."""
-    aggregator = VehicleProfileAggregator(db_path)
+    aggregator = VehicleProfileAggregator()
     aggregator.build_profiles()
     
     profile = aggregator.get_profile_by_plate(plate_text)

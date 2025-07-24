@@ -856,6 +856,220 @@
                 opacity: 1;
             }
         }
+        
+        /* Add Camera Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal {
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            transform: scale(0.9) translateY(50px);
+            transition: all 0.3s ease;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-overlay.active .modal {
+            transform: scale(1) translateY(0);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .modal-close:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #e0e0e0;
+            font-size: 0.95rem;
+        }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .form-select option {
+            background: #ffffff;
+            color: #333333;
+            padding: 0.5rem;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .form-input.error {
+            border-color: #f44336;
+            box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.2);
+        }
+        
+        .form-error {
+            color: #f44336;
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+        
+        .form-error.show {
+            display: block;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.05);
+            color: #888;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+        
+        .btn-submit {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 0.5rem;
+        }
+        
+        .loading-spinner.show {
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .success-message {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            color: #4CAF50;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .success-message.show {
+            display: block;
+        }
+        
+        .form-hint {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 0.25rem;
+        }
     </style>
 </head>
 <body>
@@ -877,7 +1091,8 @@
         </div>
         <div class="header-controls">
             <button class="btn btn-secondary" onclick="toggleSidebar()">☰ Menu</button>
-            <button class="btn btn-primary" onclick="startAllCameras()">Start All Cameras</button>
+            <button class="btn btn-primary" id="startCamerasBtn" onclick="startAllCameras()">Start All Cameras</button>
+            <button class="btn" id="stopCamerasBtn" onclick="stopAllCameras()" style="background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); color: white; display: none;">Stop All Cameras</button>
             <button class="btn btn-secondary" onclick="addCamera()">+ Add Camera</button>
         </div>
     </div>
@@ -1015,6 +1230,83 @@
         </div>
     </div>
     
+    <!-- Add Camera Modal -->
+    <div class="modal-overlay" id="addCameraModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Add New Camera</h2>
+                <button class="modal-close" onclick="closeAddCameraModal()">&times;</button>
+            </div>
+            
+            <div class="success-message" id="successMessage">
+                Camera added successfully! It will appear in the camera list shortly.
+            </div>
+            
+            <form id="addCameraForm">
+                <div class="form-group">
+                    <label class="form-label" for="cameraId">Camera ID *</label>
+                    <input type="text" id="cameraId" class="form-input" placeholder="e.g., cam_04" required>
+                    <div class="form-error" id="cameraIdError">Camera ID is required</div>
+                    <div class="form-hint">Unique identifier for this camera (alphanumeric, underscores allowed)</div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="locationName">Location Name *</label>
+                    <input type="text" id="locationName" class="form-input" placeholder="e.g., Main Entrance" required>
+                    <div class="form-error" id="locationNameError">Location name is required</div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="latitude">Latitude *</label>
+                        <input type="number" id="latitude" class="form-input" step="any" placeholder="e.g., 40.7128" required>
+                        <div class="form-error" id="latitudeError">Valid latitude is required</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="longitude">Longitude *</label>
+                        <input type="number" id="longitude" class="form-input" step="any" placeholder="e.g., -74.0060" required>
+                        <div class="form-error" id="longitudeError">Valid longitude is required</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="direction">Direction/Orientation</label>
+                    <select id="direction" class="form-select">
+                        <option value="">Select direction (optional)</option>
+                        <option value="north">North</option>
+                        <option value="northeast">Northeast</option>
+                        <option value="east">East</option>
+                        <option value="southeast">Southeast</option>
+                        <option value="south">South</option>
+                        <option value="southwest">Southwest</option>
+                        <option value="west">West</option>
+                        <option value="northwest">Northwest</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="coverageRadius">Coverage Radius (meters)</label>
+                    <input type="number" id="coverageRadius" class="form-input" placeholder="50" min="1" max="500">
+                    <div class="form-hint">Detection coverage area in meters (default: 50m)</div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="videoSource">Video Source</label>
+                    <input type="text" id="videoSource" class="form-input" placeholder="0 (webcam) or rtsp://camera-ip/stream">
+                    <div class="form-hint">Camera source: 0 for default webcam, or RTSP/HTTP stream URL</div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-cancel" onclick="closeAddCameraModal()">Cancel</button>
+                    <button type="submit" class="btn btn-submit" id="submitBtn">
+                        <div class="loading-spinner" id="loadingSpinner"></div>
+                        <span id="submitText">Add Camera</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
     <script>
         // WebSocket connection
         let ws = null;
@@ -1028,6 +1320,7 @@
         
         // Initialize the multi-camera interface
         async function initializeInterface() {
+            console.log('Initializing multi-camera interface...');
             await loadCameraConfiguration();
             await loadDetectionStats();
             await loadActiveAlertsCount();
@@ -1035,6 +1328,7 @@
             renderCameraList();
             renderCameraGrid();
             updateStatsDisplay();
+            console.log('Multi-camera interface initialized successfully!');
         }
         
         // Load camera configuration from API
@@ -1222,8 +1516,10 @@
                             <button class="feed-btn" onclick="toggleFullscreen('${camera.id}')" title="Fullscreen">⛶</button>
                         </div>
                     </div>
-                    <div class="feed-video">
-                        <span>${camera.status === 'active' ? `Monitoring ${camera.id}...` : 'Camera Offline'}</span>
+                    <div class="feed-video" id="video-${camera.id}">
+                        <video id="stream-${camera.id}" style="width: 100%; height: 100%; object-fit: cover; display: none;" autoplay muted></video>
+                        <img id="mjpeg-${camera.id}" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
+                        <span class="feed-placeholder">${camera.status === 'active' ? `Monitoring ${camera.id}...` : 'Camera Offline'}</span>
                     </div>
                     <div class="feed-overlay">
                         <div class="detection-info">
@@ -1279,48 +1575,53 @@
         function updateDetection(detection) {
             console.log('New detection:', detection);
             
-            // Update camera feed overlay with latest detection
-            const cameraId = detection.camera_id || 'camera1';
-            const cameraFeed = document.querySelector(`[data-camera-id="${cameraId}"]`);
+            // Handle both single detection and detection arrays
+            const detections = Array.isArray(detection) ? detection : [detection];
             
-            if (cameraFeed) {
-                const overlay = cameraFeed.querySelector('.feed-overlay .detection-info');
-                if (overlay) {
-                    const plateDiv = overlay.querySelector('.detection-plate');
-                    const timeDiv = overlay.querySelector('.detection-time');
-                    
-                    if (plateDiv && timeDiv) {
-                        plateDiv.textContent = detection.plate_text || 'Unknown';
-                        timeDiv.textContent = formatTimeAgo(detection.detected_time || detection.timestamp);
+            detections.forEach(det => {
+                // Update camera feed overlay with latest detection
+                const cameraId = det.camera_id || detection.camera_id || 'default';
+                const cameraFeed = document.querySelector(`[data-camera-id="${cameraId}"]`);
+                
+                if (cameraFeed) {
+                    const overlay = cameraFeed.querySelector('.feed-overlay .detection-info');
+                    if (overlay) {
+                        const plateDiv = overlay.querySelector('.detection-plate');
+                        const timeDiv = overlay.querySelector('.detection-time');
                         
-                        // Highlight the detection briefly
-                        overlay.style.backgroundColor = 'rgba(76, 175, 80, 0.3)';
-                        setTimeout(() => {
-                            overlay.style.backgroundColor = '';
-                        }, 2000);
+                        if (plateDiv && timeDiv) {
+                            plateDiv.textContent = det.plate_text || 'Detected Plate';
+                            timeDiv.textContent = formatTimeAgo(det.detected_time || det.timestamp);
+                            
+                            // Highlight the detection briefly
+                            overlay.style.backgroundColor = 'rgba(76, 175, 80, 0.3)';
+                            setTimeout(() => {
+                                overlay.style.backgroundColor = '';
+                            }, 2000);
+                        }
                     }
                 }
-            }
+                
+                // Update camera in sidebar
+                const camera = cameras.find(c => c.id === cameraId);
+                if (camera) {
+                    camera.lastDetection = det;
+                    camera.detectionCount = (camera.detectionCount || 0) + 1;
+                }
+                
+                // Update total detections
+                detectionStats.total++;
+                
+                // Update per-camera stats
+                if (!detectionStats.byCamera[cameraId]) {
+                    detectionStats.byCamera[cameraId] = 0;
+                }
+                detectionStats.byCamera[cameraId]++;
+            });
             
-            // Update camera in sidebar
-            const camera = cameras.find(c => c.id === cameraId);
-            if (camera) {
-                camera.lastDetection = detection;
-                camera.detectionCount = (camera.detectionCount || 0) + 1;
-                renderCameraList(); // Refresh sidebar
-            }
-            
-            // Update total detections
-            detectionStats.total++;
+            // Refresh displays
+            renderCameraList();
             document.getElementById('totalDetections').textContent = detectionStats.total;
-            
-            // Update per-camera stats
-            if (!detectionStats.byCamera[cameraId]) {
-                detectionStats.byCamera[cameraId] = 0;
-            }
-            detectionStats.byCamera[cameraId]++;
-            
-            // Refresh stats display
             updateStatsDisplay();
         }
         
@@ -1417,26 +1718,527 @@
         // Start all cameras
         async function startAllCameras() {
             try {
+                const startBtn = document.getElementById('startCamerasBtn');
+                const stopBtn = document.getElementById('stopCamerasBtn');
+                
+                startBtn.disabled = true;
+                startBtn.textContent = 'Starting...';
+                
                 const response = await fetch('/api/v1/surveillance/start', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({video_source: '0'})
+                    body: JSON.stringify({video_source: 'browser_stream'})
                 });
                 
                 if (response.ok) {
                     console.log('Surveillance started');
-                    // Update UI to show cameras are active
+                    
+                    // Update UI
+                    startBtn.style.display = 'none';
+                    stopBtn.style.display = 'inline-block';
+                    
+                    // Start video feeds for all cameras
+                    cameras.forEach(camera => {
+                        startCameraFeed(camera.id);
+                        camera.status = 'active';
+                    });
+                    
+                    // Update camera status in sidebar and grid
+                    renderCameraList();
+                    updateStatsDisplay();
+                } else {
+                    throw new Error('Failed to start surveillance');
                 }
             } catch (error) {
                 console.error('Error starting surveillance:', error);
+                const startBtn = document.getElementById('startCamerasBtn');
+                startBtn.disabled = false;
+                startBtn.textContent = 'Start All Cameras';
+                alert('Failed to start surveillance: ' + error.message);
+            }
+        }
+        
+        // Stop all cameras
+        async function stopAllCameras() {
+            const startBtn = document.getElementById('startCamerasBtn');
+            const stopBtn = document.getElementById('stopCamerasBtn');
+            
+            try {
+                stopBtn.disabled = true;
+                stopBtn.textContent = 'Stopping...';
+                
+                const response = await fetch('/api/v1/surveillance/stop', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                
+                if (response.ok) {
+                    console.log('Surveillance stopped');
+                } else {
+                    console.warn('API stop request failed, but continuing with UI cleanup');
+                }
+            } catch (error) {
+                console.error('Error stopping surveillance:', error);
+                // Continue with cleanup even if API call fails
+            } finally {
+                // Always reset UI state regardless of API success/failure
+                stopBtn.style.display = 'none';
+                stopBtn.disabled = false;
+                stopBtn.textContent = 'Stop All Cameras';
+                
+                startBtn.style.display = 'inline-block';
+                startBtn.disabled = false;
+                startBtn.textContent = 'Start All Cameras';
+                
+                // Stop all camera feeds
+                cameras.forEach(camera => {
+                    stopCameraFeed(camera.id);
+                    camera.status = 'offline';
+                });
+                
+                // Update camera status in sidebar and grid
+                renderCameraList();
+                updateStatsDisplay();
+            }
+        }
+        
+        // Global variable to track processing intervals for each camera
+        let cameraIntervals = {};
+        
+        // Start camera feed
+        function startCameraFeed(cameraId) {
+            const videoElement = document.getElementById(`stream-${cameraId}`);
+            const mjpegElement = document.getElementById(`mjpeg-${cameraId}`);
+            const placeholder = document.querySelector(`[data-camera-id="${cameraId}"] .feed-placeholder`);
+            
+            if (placeholder) {
+                placeholder.style.display = 'none';
+            }
+            
+            // Try WebRTC first (more reliable for browser cameras)
+            if (videoElement && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        videoElement.srcObject = stream;
+                        videoElement.style.display = 'block';
+                        console.log(`Started WebRTC stream for ${cameraId}`);
+                        
+                        // Start processing frames for plate recognition
+                        startFrameProcessing(cameraId, videoElement);
+                    })
+                    .catch(err => {
+                        console.error(`Error accessing WebRTC camera for ${cameraId}:`, err);
+                        
+                        // Fallback to MJPEG stream
+                        if (mjpegElement) {
+                            console.log(`Trying MJPEG stream for ${cameraId}`);
+                            mjpegElement.src = '/api/v1/surveillance/video-feed';
+                            mjpegElement.style.display = 'block';
+                            
+                            mjpegElement.onerror = () => {
+                                console.log(`MJPEG stream also failed for ${cameraId}`);
+                                mjpegElement.style.display = 'none';
+                                if (placeholder) {
+                                    placeholder.textContent = 'Camera access failed';
+                                    placeholder.style.display = 'block';
+                                }
+                            };
+                        } else {
+                            if (placeholder) {
+                                placeholder.textContent = 'Camera access denied';
+                                placeholder.style.display = 'block';
+                            }
+                        }
+                    });
+            } else {
+                // No WebRTC support, try MJPEG directly
+                if (mjpegElement) {
+                    mjpegElement.src = '/api/v1/surveillance/video-feed';
+                    mjpegElement.style.display = 'block';
+                    
+                    mjpegElement.onerror = () => {
+                        console.log(`MJPEG stream failed for ${cameraId}`);
+                        mjpegElement.style.display = 'none';
+                        if (placeholder) {
+                            placeholder.textContent = 'No camera available';
+                            placeholder.style.display = 'block';
+                        }
+                    };
+                }
+            }
+        }
+        
+        // Start processing frames for plate recognition
+        function startFrameProcessing(cameraId, videoElement) {
+            // Clear any existing interval for this camera
+            if (cameraIntervals[cameraId]) {
+                clearInterval(cameraIntervals[cameraId]);
+            }
+            
+            // Create canvas for capturing frames
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Process frames every 2 seconds
+            cameraIntervals[cameraId] = setInterval(async () => {
+                if (videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+                    try {
+                        // Set canvas size to match video
+                        canvas.width = videoElement.videoWidth;
+                        canvas.height = videoElement.videoHeight;
+                        
+                        // Draw current frame to canvas
+                        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                        
+                        // Convert to blob and send for processing
+                        canvas.toBlob(async (blob) => {
+                            if (blob) {
+                                await processFrameForDetection(cameraId, blob);
+                            }
+                        }, 'image/jpeg', 0.8);
+                    } catch (error) {
+                        console.error(`Error processing frame for ${cameraId}:`, error);
+                    }
+                }
+            }, 2000); // Process every 2 seconds
+        }
+        
+        // Process frame for detection
+        async function processFrameForDetection(cameraId, frameBlob) {
+            try {
+                const formData = new FormData();
+                formData.append('frame', frameBlob, `frame_${cameraId}_${Date.now()}.jpg`);
+                formData.append('frame_id', `${cameraId}_${Date.now()}`);
+                formData.append('camera_id', cameraId); // Include camera ID
+                
+                const response = await fetch('/api/v1/surveillance/process-frame', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                // Handle detection results
+                if (result.detections && result.detections.length > 0) {
+                    // Ensure each detection has the correct camera_id
+                    result.detections.forEach(detection => {
+                        detection.camera_id = cameraId;
+                    });
+                    
+                    // Update the camera feed with detection info
+                    updateCameraDetections(cameraId, result.detections);
+                    
+                    // Send detection updates via WebSocket
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: 'detection',
+                            camera_id: cameraId,
+                            detections: result.detections,
+                            timestamp: new Date().toISOString()
+                        }));
+                    }
+                    
+                    console.log(`Processed ${result.detections.length} detections for camera ${cameraId}`);
+                }
+            } catch (error) {
+                console.error(`Error processing frame for ${cameraId}:`, error);
+            }
+        }
+        
+        // Update camera display with detection results
+        function updateCameraDetections(cameraId, detections) {
+            const cameraFeed = document.querySelector(`[data-camera-id="${cameraId}"]`);
+            if (!cameraFeed) return;
+            
+            const overlay = cameraFeed.querySelector('.feed-overlay .detection-info');
+            if (!overlay) return;
+            
+            // Get the latest detection
+            const latestDetection = detections[0];
+            if (latestDetection) {
+                const plateDiv = overlay.querySelector('.detection-plate');
+                const timeDiv = overlay.querySelector('.detection-time');
+                
+                if (plateDiv && timeDiv) {
+                    plateDiv.textContent = latestDetection.plate_text || 'Detected Plate';
+                    timeDiv.textContent = 'Just now';
+                    
+                    // Highlight the detection briefly
+                    overlay.style.backgroundColor = 'rgba(76, 175, 80, 0.3)';
+                    setTimeout(() => {
+                        overlay.style.backgroundColor = '';
+                    }, 2000);
+                    
+                    // Update stats
+                    updateDetectionStats();
+                }
+            }
+        }
+        
+        // Update detection statistics
+        function updateDetectionStats() {
+            const currentCount = parseInt(document.getElementById('totalDetections').textContent) || 0;
+            document.getElementById('totalDetections').textContent = currentCount + 1;
+        }
+        
+        // Stop camera feed
+        function stopCameraFeed(cameraId) {
+            const videoElement = document.getElementById(`stream-${cameraId}`);
+            const mjpegElement = document.getElementById(`mjpeg-${cameraId}`);
+            const placeholder = document.querySelector(`[data-camera-id="${cameraId}"] .feed-placeholder`);
+            
+            // Stop frame processing interval
+            if (cameraIntervals[cameraId]) {
+                clearInterval(cameraIntervals[cameraId]);
+                delete cameraIntervals[cameraId];
+                console.log(`Stopped frame processing for ${cameraId}`);
+            }
+            
+            // Stop MJPEG stream
+            if (mjpegElement) {
+                mjpegElement.src = '';
+                mjpegElement.style.display = 'none';
+            }
+            
+            // Stop WebRTC stream
+            if (videoElement && videoElement.srcObject) {
+                const tracks = videoElement.srcObject.getTracks();
+                tracks.forEach(track => track.stop());
+                videoElement.srcObject = null;
+                videoElement.style.display = 'none';
+            }
+            
+            // Show placeholder
+            if (placeholder) {
+                placeholder.textContent = 'Camera Offline';
+                placeholder.style.display = 'block';
             }
         }
         
         // Add new camera
         function addCamera() {
-            // Show camera configuration modal
-            alert('Camera configuration UI coming soon!');
+            document.getElementById('addCameraModal').classList.add('active');
+            // Reset form
+            document.getElementById('addCameraForm').reset();
+            clearFormErrors();
+            hideSuccessMessage();
         }
+        
+        // Close add camera modal
+        function closeAddCameraModal() {
+            document.getElementById('addCameraModal').classList.remove('active');
+            clearFormErrors();
+            hideSuccessMessage();
+        }
+        
+        // Clear form errors
+        function clearFormErrors() {
+            document.querySelectorAll('.form-error').forEach(error => {
+                error.classList.remove('show');
+            });
+            document.querySelectorAll('.form-input, .form-select').forEach(input => {
+                input.classList.remove('error');
+            });
+        }
+        
+        // Show form error
+        function showFormError(fieldId, message) {
+            const field = document.getElementById(fieldId);
+            const error = document.getElementById(fieldId + 'Error');
+            
+            field.classList.add('error');
+            if (error) {
+                error.textContent = message;
+                error.classList.add('show');
+            }
+        }
+        
+        // Hide success message
+        function hideSuccessMessage() {
+            document.getElementById('successMessage').classList.remove('show');
+        }
+        
+        // Show success message
+        function showSuccessMessage() {
+            document.getElementById('successMessage').classList.add('show');
+        }
+        
+        // Set loading state
+        function setLoadingState(loading) {
+            const submitBtn = document.getElementById('submitBtn');
+            const spinner = document.getElementById('loadingSpinner');
+            const submitText = document.getElementById('submitText');
+            
+            if (loading) {
+                submitBtn.disabled = true;
+                spinner.classList.add('show');
+                submitText.textContent = 'Adding Camera...';
+            } else {
+                submitBtn.disabled = false;
+                spinner.classList.remove('show');
+                submitText.textContent = 'Add Camera';
+            }
+        }
+        
+        // Validate form
+        function validateCameraForm() {
+            clearFormErrors();
+            let isValid = true;
+            
+            // Camera ID validation
+            const cameraId = document.getElementById('cameraId').value.trim();
+            if (!cameraId) {
+                showFormError('cameraId', 'Camera ID is required');
+                isValid = false;
+            } else if (!/^[a-zA-Z0-9_]+$/.test(cameraId)) {
+                showFormError('cameraId', 'Camera ID can only contain letters, numbers, and underscores');
+                isValid = false;
+            } else if (cameras.some(cam => cam.id === cameraId)) {
+                showFormError('cameraId', 'Camera ID already exists');
+                isValid = false;
+            }
+            
+            // Location name validation
+            const locationName = document.getElementById('locationName').value.trim();
+            if (!locationName) {
+                showFormError('locationName', 'Location name is required');
+                isValid = false;
+            }
+            
+            // Latitude validation
+            const latitude = parseFloat(document.getElementById('latitude').value);
+            if (isNaN(latitude) || latitude < -90 || latitude > 90) {
+                showFormError('latitude', 'Latitude must be between -90 and 90');
+                isValid = false;
+            }
+            
+            // Longitude validation
+            const longitude = parseFloat(document.getElementById('longitude').value);
+            if (isNaN(longitude) || longitude < -180 || longitude > 180) {
+                showFormError('longitude', 'Longitude must be between -180 and 180');
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+        
+        // Handle form submission
+        document.getElementById('addCameraForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!validateCameraForm()) {
+                return;
+            }
+            
+            setLoadingState(true);
+            hideSuccessMessage();
+            
+            try {
+                // Collect form data
+                const formData = {
+                    camera_id: document.getElementById('cameraId').value.trim(),
+                    location_name: document.getElementById('locationName').value.trim(),
+                    latitude: parseFloat(document.getElementById('latitude').value),
+                    longitude: parseFloat(document.getElementById('longitude').value),
+                    direction: document.getElementById('direction').value || null,
+                    coverage_radius_meters: parseFloat(document.getElementById('coverageRadius').value) || 50.0
+                };
+                
+                // Register camera
+                const response = await fetch('/api/v1/cameras/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Success
+                    showSuccessMessage();
+                    
+                    // Add camera to local list
+                    const newCamera = {
+                        id: formData.camera_id,
+                        name: `${formData.location_name} (${formData.camera_id})`,
+                        status: 'offline', // New cameras start offline until streaming starts
+                        detectionCount: 0,
+                        lastDetection: null
+                    };
+                    
+                    cameras.push(newCamera);
+                    
+                    // Start stream if video source provided
+                    const videoSource = document.getElementById('videoSource').value.trim();
+                    if (videoSource) {
+                        try {
+                            const streamResponse = await fetch(`/api/v1/cameras/${formData.camera_id}/stream`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    source: videoSource
+                                })
+                            });
+                            
+                            if (streamResponse.ok) {
+                                newCamera.status = 'active';
+                                activeCameras.add(formData.camera_id);
+                            }
+                        } catch (streamError) {
+                            console.warn('Could not start camera stream:', streamError);
+                        }
+                    }
+                    
+                    // Refresh UI
+                    renderCameraList();
+                    renderCameraGrid();
+                    updateStatsDisplay();
+                    
+                    // Clear form after 2 seconds
+                    setTimeout(() => {
+                        document.getElementById('addCameraForm').reset();
+                        hideSuccessMessage();
+                    }, 2000);
+                    
+                    // Close modal after 3 seconds
+                    setTimeout(() => {
+                        closeAddCameraModal();
+                    }, 3000);
+                    
+                } else {
+                    // Error from server
+                    throw new Error(result.error || 'Failed to add camera');
+                }
+                
+            } catch (error) {
+                console.error('Error adding camera:', error);
+                showFormError('cameraId', error.message || 'Failed to add camera. Please try again.');
+            } finally {
+                setLoadingState(false);
+            }
+        });
+        
+        // Close modal when clicking outside
+        document.getElementById('addCameraModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAddCameraModal();
+            }
+        });
+        
+        // Escape key to close modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeAddCameraModal();
+            }
+        });
         
         // Select camera
         function selectCamera(cameraId) {

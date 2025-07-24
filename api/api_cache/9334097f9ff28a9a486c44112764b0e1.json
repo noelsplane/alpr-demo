@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-24T12:35:36.001115",
+  "result": [
+    {
+      "plate": "ru18yet",
+      "state": "WI",
+      "state_confidence": 0.293,
+      "vehicle": {
+        "type": "Sedan",
+        "type_confidence": 0.952,
+        "make": null,
+        "make_confidence": 0,
+        "model": null,
+        "model_confidence": 0,
+        "color": null,
+        "color_confidence": 0,
+        "year": null,
+        "year_confidence": 0
+      },
+      "box": {
+        "xmin": 197,
+        "ymin": 196,
+        "xmax": 315,
+        "ymax": 255
+      }
+    }
+  ]
+}

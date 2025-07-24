@@ -19,6 +19,7 @@ import time
 import json
 from anomaly_detector import EnhancedAnomalyDetector
 from cross_camera_tracker import cross_camera_tracker
+from camera_detector import camera_detector, CameraInfo
 
 logger = logging.getLogger(__name__)
 
@@ -306,12 +307,23 @@ class RealtimeVideoProcessor:
     
     def _capture_loop(self, video_source):
         """Capture frames in a separate thread."""
+        # If video_source is an integer, try to get camera info for better initialization
+        if isinstance(video_source, int):
+            camera_info = camera_detector.get_camera_by_index(video_source)
+            if camera_info and not camera_info.is_working:
+                logger.warning(f"Camera {video_source} was detected but marked as non-working")
+        
         cap = cv2.VideoCapture(video_source)
         
         if isinstance(video_source, int):
+            # Set optimal camera properties
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
             cap.set(cv2.CAP_PROP_FPS, 30)
+            
+            # Try to set additional properties for better USB camera support
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Reduce buffer for real-time processing
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))  # MJPEG format
         
         try:
             while self.is_processing:
