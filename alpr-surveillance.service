@@ -1,0 +1,31 @@
+[Unit]
+Description=ALPR Surveillance System
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=exec
+User=alpr
+Group=alpr
+WorkingDirectory=/opt/alpr-surveillance/api
+Environment=PATH=/opt/alpr-surveillance/venv/bin
+Environment=PYTHONPATH=/opt/alpr-surveillance/api
+EnvironmentFile=/opt/alpr-surveillance/.env
+ExecStart=/opt/alpr-surveillance/venv/bin/gunicorn main:app --bind 0.0.0.0:8000 --workers 4 --worker-class uvicorn.workers.UvicornWorker --timeout 300 --access-logfile /var/log/alpr-surveillance/access.log --error-logfile /var/log/alpr-surveillance/error.log
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=3
+KillMode=mixed
+TimeoutStopSec=30
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/alpr-surveillance /var/log/alpr-surveillance /tmp
+PrivateTmp=true
+PrivateDevices=false
+DeviceAllow=/dev/video* rw
+
+[Install]
+WantedBy=multi-user.target

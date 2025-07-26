@@ -20,6 +20,7 @@ import json
 from anomaly_detector import EnhancedAnomalyDetector
 from cross_camera_tracker import cross_camera_tracker
 from camera_detector import camera_detector, CameraInfo
+from state_filter import clean_plate_text, is_valid_plate_text
 
 logger = logging.getLogger(__name__)
 
@@ -202,8 +203,24 @@ class FrameProcessor:
                     except Exception as e:
                         logger.error(f"OCR error: {e}")
                 
-                # If we found text, create a detection
+                # If we found text, validate and filter it
                 if plate_text:
+                    # Clean and validate the plate text
+                    original_text = plate_text
+                    cleaned_text = clean_plate_text(plate_text)
+                    
+                    # Skip if the text is filtered out (state name, invalid format, etc.)
+                    if not cleaned_text:
+                        logger.info(f"Filtered out invalid plate text: '{original_text}'")
+                        continue
+                    
+                    # Additional validation with confidence
+                    if not is_valid_plate_text(cleaned_text, confidence):
+                        logger.info(f"Filtered out low-quality plate text: '{original_text}' -> '{cleaned_text}' (conf: {confidence})")
+                        continue
+                    
+                    # Use the cleaned text
+                    plate_text = cleaned_text
                     # Convert crop to base64
                     plate_img = Image.fromarray(cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
                     buffer = BytesIO()

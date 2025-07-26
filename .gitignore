@@ -34,6 +34,10 @@ venv.bak/
 *.db
 *.sqlite3
 
+# API Cache files
+api/api_cache/*.json
+!api/api_cache/.gitkeep
+
 # Logs
 logs/
 *.log
@@ -77,3 +81,6 @@ models/*.pt
 # OS files
 .DS_Store
 Thumbs.db
+
+# Claude AI assistant files
+.claude/

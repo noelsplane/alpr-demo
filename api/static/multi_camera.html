@@ -1336,15 +1336,22 @@
             try {
                 // In a real system, this would come from your camera configuration API
                 // For now, we'll detect available cameras from recent detections
-                const response = await fetch('/api/v1/detections/recent?limit=100');
+                const response = await fetch('/api/v1/detections');
                 const data = await response.json();
                 
                 // Extract unique camera sources from recent detections
                 const cameraSet = new Set();
-                if (data.detections) {
-                    data.detections.forEach(detection => {
-                        if (detection.camera_id || detection.source) {
-                            cameraSet.add(detection.camera_id || detection.source || 'Camera 1');
+                if (Array.isArray(data)) {
+                    // Limit to recent 100 detections client-side
+                    const limitedData = data.slice(0, 100);
+                    limitedData.forEach(detectionGroup => {
+                        // Each group can have multiple plates
+                        if (detectionGroup.plates_detected) {
+                            detectionGroup.plates_detected.forEach(plate => {
+                                // Extract camera info from image name or default
+                                const cameraId = detectionGroup.camera_id || 'Default Camera';
+                                cameraSet.add(cameraId);
+                            });
                         }
                     });
                 }
@@ -1392,16 +1399,33 @@
                 }
                 
                 // Load recent detections for camera-specific stats
-                const recentResponse = await fetch('/api/v1/detections/recent?limit=50');
+                const recentResponse = await fetch('/api/v1/detections');
                 const recentData = await recentResponse.json();
                 
-                if (recentData.detections) {
-                    recentDetections = recentData.detections;
+                if (Array.isArray(recentData)) {
+                    // Limit to recent 50 detections client-side
+                    const limitedRecentData = recentData.slice(0, 50);
+                    recentDetections = [];
+                    
+                    // Flatten detection groups into individual detections
+                    limitedRecentData.forEach(detectionGroup => {
+                        if (detectionGroup.plates_detected) {
+                            detectionGroup.plates_detected.forEach(plate => {
+                                recentDetections.push({
+                                    plate_text: plate.text,
+                                    confidence: plate.confidence,
+                                    timestamp: detectionGroup.timestamp,
+                                    camera_id: detectionGroup.camera_id || 'default',
+                                    image_path: detectionGroup.image
+                                });
+                            });
+                        }
+                    });
                     
                     // Calculate per-camera stats
                     detectionStats.byCamera = {};
-                    recentData.detections.forEach(detection => {
-                        const cameraId = detection.camera_id || detection.source || 'default';
+                    recentDetections.forEach(detection => {
+                        const cameraId = detection.camera_id;
                         detectionStats.byCamera[cameraId] = (detectionStats.byCamera[cameraId] || 0) + 1;
                     });
                     
@@ -1410,8 +1434,8 @@
                         camera.detectionCount = detectionStats.byCamera[camera.id] || 0;
                         
                         // Find most recent detection for this camera
-                        const cameraDetections = recentData.detections.filter(d => 
-                            (d.camera_id || d.source || 'default') === camera.id
+                        const cameraDetections = recentDetections.filter(d => 
+                            d.camera_id === camera.id
                         );
                         if (cameraDetections.length > 0) {
                             camera.lastDetection = cameraDetections[0];

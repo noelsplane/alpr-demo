@@ -25,6 +25,7 @@ from models import (
 )
 from state_model import get_state_classifier
 from plate_filter_utils import extract_plate_number, detect_state_from_context
+from state_filter import state_filter, filter_state_names, is_valid_plate_text, clean_plate_text
 import logging
 import requests
 from dotenv import load_dotenv
@@ -214,8 +215,22 @@ def save_detections_to_db(image_name, plates_detected, vehicle_info=None):
     db = get_db()
     try:
         for plate in plates_detected:
+            # Filter out state names and invalid plate text
+            original_text = plate["text"]
+            cleaned_text = clean_plate_text(original_text)
+            
+            # Skip this detection if it's filtered out (state name, etc.)
+            if not cleaned_text:
+                logger.info(f"Filtered out invalid plate text: '{original_text}'")
+                continue
+            
+            # Validate plate text format and confidence
+            if not is_valid_plate_text(cleaned_text, plate["confidence"]):
+                logger.info(f"Filtered out invalid plate format: '{original_text}' -> '{cleaned_text}'")
+                continue
+            
             detection = PlateDetection(
-                plate_text=plate["text"],
+                plate_text=cleaned_text,  # Use cleaned text
                 confidence=plate["confidence"],
                 image_name=image_name,
                 x1=plate["box"][0],
@@ -291,8 +306,22 @@ async def create_sighting(file: UploadFile = File(...)):
                 cropped = img_bgr[y1:y2, x1:x2]
                 cropped_rgb = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
                 
+                # Filter and validate plate text
+                original_text = pr_plate['plate'].upper()
+                cleaned_text = clean_plate_text(original_text)
+                
+                # Skip if the text is filtered out (state name, invalid format, etc.)
+                if not cleaned_text:
+                    logger.info(f"PlateRecognizer: Filtered out invalid plate text: '{original_text}'")
+                    continue
+                
+                # Additional validation with confidence
+                if not is_valid_plate_text(cleaned_text, 0.9):
+                    logger.info(f"PlateRecognizer: Filtered out invalid plate format: '{original_text}' -> '{cleaned_text}'")
+                    continue
+                
                 plate_data = {
-                    "text": pr_plate['plate'].upper(),
+                    "text": cleaned_text,  # Use cleaned text
                     "confidence": 0.9,  # PlateRecognizer is generally very accurate
                     "box": [x1, y1, x2, y2],
                     "plate_image_base64": encode_image_to_base64(cropped_rgb),
@@ -348,16 +377,30 @@ async def create_sighting(file: UploadFile = File(...)):
             plate_text, confidence = extract_plate_number(all_results)
             
             if plate_text:
+                # Filter and validate plate text
+                original_text = plate_text
+                cleaned_text = clean_plate_text(original_text)
+                
+                # Skip if the text is filtered out (state name, invalid format, etc.)
+                if not cleaned_text:
+                    logger.info(f"Local OCR: Filtered out invalid plate text: '{original_text}'")
+                    continue
+                
+                # Additional validation with confidence
+                if not is_valid_plate_text(cleaned_text, confidence):
+                    logger.info(f"Local OCR: Filtered out invalid plate format: '{original_text}' -> '{cleaned_text}' (conf: {confidence})")
+                    continue
+                
                 # Try pattern matching for state
                 state = None
                 state_conf = 0
-                pattern_state, pattern_conf = state_classifier.classify_from_text(plate_text)
+                pattern_state, pattern_conf = state_classifier.classify_from_text(cleaned_text)
                 if pattern_state and pattern_conf > 0.6:
                     state = pattern_state
                     state_conf = pattern_conf
                 
                 plate_data = {
-                    "text": plate_text,
+                    "text": cleaned_text,  # Use cleaned text
                     "confidence": round(float(confidence), 2),
                     "box": [x1, y1, x2, y2],
                     "plate_image_base64": encode_image_to_base64(cropped_rgb),
@@ -432,6 +475,43 @@ def clear_all_detections():
     finally:
         db.close()
 
+
+@app.get("/api/v1/state-filter/stats")
+def get_state_filter_stats():
+    """Get state filter statistics."""
+    try:
+        stats = state_filter.get_filter_stats()
+        return JSONResponse(content=stats)
+    except Exception as e:
+        logger.error(f"Error getting state filter stats: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+@app.post("/api/v1/state-filter/test")
+async def test_state_filter(request: dict):
+    """Test if a text would be filtered by the state filter."""
+    try:
+        text = request.get('text', '')
+        confidence = request.get('confidence', 0.0)
+        
+        if not text:
+            return JSONResponse(content={"error": "Text is required"}, status_code=400)
+        
+        should_filter = state_filter.should_filter_detection(text, confidence)
+        cleaned_text = clean_plate_text(text)
+        is_valid = is_valid_plate_text(text, confidence)
+        
+        return JSONResponse(content={
+            "original_text": text,
+            "cleaned_text": cleaned_text,
+            "should_filter": should_filter,
+            "is_valid_plate": is_valid,
+            "is_state_name": state_filter.is_state_name(text),
+            "contains_state_info": state_filter.contains_state_info(text),
+            "is_valid_format": state_filter.is_valid_plate_format(text)
+        })
+    except Exception as e:
+        logger.error(f"Error testing state filter: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 @app.get("/api/v1/state-analytics")
 def get_state_analytics():

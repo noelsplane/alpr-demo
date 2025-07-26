@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALPR Alerts - Alert Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0a 100%);
+        }
+
+        .floating-orbs {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.4;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .orb1 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+            top: -150px;
+            left: -150px;
+            animation-delay: 0s;
+        }
+
+        .orb2 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            bottom: -200px;
+            right: -200px;
+            animation-delay: 5s;
+        }
+
+        .orb3 {
+            width: 250px;
+            height: 250px;
+            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: 10s;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            33% {
+                transform: translate(30px, -30px) rotate(120deg);
+            }
+            66% {
+                transform: translate(-20px, 20px) rotate(240deg);
+            }
+        }
+
+        /* Navigation */
+        nav {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: color 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover {
+            color: #ffffff;
+        }
+
+        /* Main container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-top: 2rem;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            color: rgba(255, 255, 255, 0.6);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Alert summary cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .summary-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .summary-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .summary-card:hover::before {
+            opacity: 1;
+        }
+
+        .summary-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.1);
+        }
+
+        .summary-card.critical { --gradient-start: #f5576c; --gradient-end: #f093fb; }
+        .summary-card.high { --gradient-start: #fa709a; --gradient-end: #fee140; }
+        .summary-card.medium { --gradient-start: #4facfe; --gradient-end: #00f2fe; }
+        .summary-card.low { --gradient-start: #30cfd0; --gradient-end: #330867; }
+
+        .summary-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .summary-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+        }
+
+        .summary-label {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Filters section */
+        .filters-section {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .filters-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .filters-header h3 {
+            font-size: 1.5rem;
+            color: #ffffff;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-label {
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 600;
+        }
+
+        .filter-select,
+        .filter-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .filter-select:focus,
+        .filter-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+
+        .filter-select option {
+            background: #1a1a2e;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Alerts list */
+        .alerts-section {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+        }
+
+        .alerts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .alerts-header h3 {
+            font-size: 1.5rem;
+            color: #ffffff;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.25rem;
+            border-radius: 8px;
+        }
+
+        .toggle-btn {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .alerts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .alert-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .alert-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(5px);
+        }
+
+        .alert-severity {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            border-radius: 15px 0 0 15px;
+        }
+
+        .alert-severity.critical { background: #f5576c; }
+        .alert-severity.high { background: #fa709a; }
+        .alert-severity.medium { background: #4facfe; }
+        .alert-severity.low { background: #30cfd0; }
+
+        .alert-content {
+            padding-left: 1rem;
+        }
+
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .alert-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .alert-type {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .alert-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-critical { background: rgba(245, 87, 108, 0.2); color: #f5576c; }
+        .badge-high { background: rgba(250, 112, 154, 0.2); color: #fa709a; }
+        .badge-medium { background: rgba(79, 172, 254, 0.2); color: #4facfe; }
+        .badge-low { background: rgba(48, 207, 208, 0.2); color: #30cfd0; }
+
+        .alert-time {
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .alert-details {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .alert-detail {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .alert-message {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.5;
+        }
+
+        .alert-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .action-btn {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        /* Alert details modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #1a1a2e;
+            border-radius: 20px;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 2rem;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .vehicle-info {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+        }
+
+        .info-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.875rem;
+        }
+
+        .info-value {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .plate-image {
+            width: 100%;
+            max-width: 300px;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+            
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .alert-details {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background">
+        <div class="floating-orbs">
+            <div class="orb orb1"></div>
+            <div class="orb orb2"></div>
+            <div class="orb orb3"></div>
+        </div>
+    </div>
+
+    <nav>
+        <div class="nav-container">
+            <a href="/ui/navigation.html" class="logo">ALPR System</a>
+            <ul class="nav-links">
+                <li><a href="/ui/navigation.html">Home</a></li>
+                <li><a href="/ui/">Upload</a></li>
+                <li><a href="/ui/analytics.html">Analytics</a></li>
+                <li><a href="/ui/surveillance.html">Surveillance</a></li>
+                <li><a href="/ui/search.html">Search</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h1>Alert Management</h1>
+            <p>Monitor and manage system alerts, anomalies, and suspicious vehicle activities</p>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-grid">
+            <div class="summary-card critical" onclick="filterBySeverity('critical')">
+                <div class="summary-icon"></div>
+                <div class="summary-value" id="critical-count">0</div>
+                <div class="summary-label">Critical Alerts</div>
+            </div>
+
+            <div class="summary-card high" onclick="filterBySeverity('high')">
+                <div class="summary-icon"></div>
+                <div class="summary-value" id="high-count">0</div>
+                <div class="summary-label">High Priority</div>
+            </div>
+
+            <div class="summary-card medium" onclick="filterBySeverity('medium')">
+                <div class="summary-icon"></div>
+                <div class="summary-value" id="medium-count">0</div>
+                <div class="summary-label">Medium Priority</div>
+            </div>
+
+            <div class="summary-card low" onclick="filterBySeverity('low')">
+                <div class="summary-icon"></div>
+                <div class="summary-value" id="low-count">0</div>
+                <div class="summary-label">Low Priority</div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-section">
+            <div class="filters-header">
+                <h3>Filter Alerts</h3>
+            </div>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label class="filter-label">Alert Type</label>
+                    <select class="filter-select" id="alert-type">
+                        <option value="">All Types</option>
+                        <option value="NO_PLATE_VEHICLE">No License Plate</option>
+                        <option value="PLATE_SWITCH">Plate Switch</option>
+                        <option value="LOITERING">Loitering</option>
+                        <option value="RAPID_REAPPEARANCE">Rapid Reappearance</option>
+                        <option value="SUSPICIOUS_NO_PLATE">Suspicious No-Plate</option>
+                        <option value="IMPOSSIBLE_SPEED">Impossible Speed</option>
+                        <option value="CIRCULAR_ROUTE">Circular Route</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">Severity</label>
+                    <select class="filter-select" id="severity">
+                        <option value="">All Severities</option>
+                        <option value="critical">Critical</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">Time Range</label>
+                    <select class="filter-select" id="time-range">
+                        <option value="1h">Last Hour</option>
+                        <option value="24h" selected>Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">Vehicle Plate</label>
+                    <input type="text" class="filter-input" id="plate-filter" placeholder="Enter plate number">
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
+                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+
+        <!-- Alerts List -->
+        <div class="alerts-section">
+            <div class="alerts-header">
+                <h3>Recent Alerts</h3>
+                <div class="view-toggle">
+                    <button class="toggle-btn active" onclick="setView('list')">List</button>
+                    <button class="toggle-btn" onclick="setView('grid')">Grid</button>
+                </div>
+            </div>
+            <div class="alerts-list" id="alerts-list">
+                <div class="empty-state">
+                    <div class="loading"></div>
+                    <p>Loading alerts...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Details Modal -->
+    <div class="modal" id="alert-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Alert Details</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modal-body">
+                <!-- Alert details will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allAlerts = [];
+        let currentFilters = {
+            type: '',
+            severity: '',
+            timeRange: '24h',
+            plate: ''
+        };
+
+        // WebSocket connection
+        let ws = null;
+
+        function connectWebSocket() {
+            ws = new WebSocket('ws://localhost:8000/ws');
+            
+            ws.onopen = () => {
+                console.log('Connected to WebSocket');
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'anomaly_alert') {
+                    handleNewAlert(data.data);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+            
+            ws.onclose = () => {
+                console.log('WebSocket disconnected, reconnecting...');
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+
+        // Load alerts on page load
+        async function loadAlerts() {
+            try {
+                const timeWindow = getTimeWindowHours();
+                const response = await fetch(`/api/v1/anomalies/all?time_window_hours=${timeWindow}`);
+                const data = await response.json();
+                
+                allAlerts = data.anomalies || [];
+                updateSummary(data.summary);
+                displayAlerts(allAlerts);
+                
+            } catch (error) {
+                console.error('Error loading alerts:', error);
+                showError('Failed to load alerts');
+            }
+        }
+
+        function getTimeWindowHours() {
+            const timeRange = currentFilters.timeRange;
+            switch (timeRange) {
+                case '1h': return 1;
+                case '24h': return 24;
+                case '7d': return 168;
+                case '30d': return 720;
+                default: return 24;
+            }
+        }
+
+        function updateSummary(summary) {
+            if (summary && summary.by_severity) {
+                document.getElementById('critical-count').textContent = summary.by_severity.critical || 0;
+                document.getElementById('high-count').textContent = summary.by_severity.high || 0;
+                document.getElementById('medium-count').textContent = summary.by_severity.medium || 0;
+                document.getElementById('low-count').textContent = summary.by_severity.low || 0;
+            }
+        }
+
+        function displayAlerts(alerts) {
+            const container = document.getElementById('alerts-list');
+            
+            if (!alerts || alerts.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon"></div>
+                        <p>No alerts found for the selected filters</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = alerts.map(alert => createAlertElement(alert)).join('');
+        }
+
+        function createAlertElement(alert) {
+            return `
+                <div class="alert-item" onclick="showAlertDetails('${alert.id}')">
+                    <div class="alert-severity ${alert.severity}"></div>
+                    <div class="alert-content">
+                        <div class="alert-header">
+                            <div class="alert-title">
+                                <span class="alert-type">${formatAlertType(alert.type)}</span>
+                                <span class="alert-badge badge-${alert.severity}">${alert.severity.toUpperCase()}</span>
+                            </div>
+                            <span class="alert-time">${formatTime(alert.detected_time)}</span>
+                        </div>
+                        <div class="alert-details">
+                            <div class="alert-detail">
+                                <span></span>
+                                <span>${alert.plate_text || 'NO PLATE'}</span>
+                            </div>
+                            ${alert.vehicle_info ? `
+                                <div class="alert-detail">
+                                    <span></span>
+                                    <span>${formatVehicleInfo(alert.vehicle_info)}</span>
+                                </div>
+                            ` : ''}
+                            <div class="alert-detail">
+                                <span></span>
+                                <span>Track: ${alert.track_id}</span>
+                            </div>
+                        </div>
+                        <div class="alert-message">${alert.message}</div>
+                        <div class="alert-actions">
+                            <button class="action-btn" onclick="viewVehicleHistory(event, '${alert.plate_text || alert.track_id}')">
+                                View History
+                            </button>
+                            <button class="action-btn" onclick="dismissAlert(event, '${alert.id}')">
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatAlertType(type) {
+            const typeMap = {
+                'NO_PLATE_VEHICLE': 'No License Plate',
+                'PLATE_SWITCH': 'Plate Switch Detected',
+                'LOITERING': 'Loitering Alert',
+                'RAPID_REAPPEARANCE': 'Rapid Reappearance',
+                'SUSPICIOUS_NO_PLATE': 'Suspicious No-Plate Vehicle',
+                'IMPOSSIBLE_SPEED': 'Impossible Speed',
+                'CIRCULAR_ROUTE': 'Circular Route Pattern'
+            };
+            return typeMap[type] || type;
+        }
+
+        function formatVehicleInfo(vehicleInfo) {
+            const parts = [];
+            if (vehicleInfo.color) parts.push(vehicleInfo.color);
+            if (vehicleInfo.make) parts.push(vehicleInfo.make);
+            if (vehicleInfo.model) parts.push(vehicleInfo.model);
+            if (vehicleInfo.type) parts.push(`(${vehicleInfo.type})`);
+            return parts.join(' ') || 'Unknown Vehicle';
+        }
+
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return 'Just now';
+            if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+            if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+
+        async function showAlertDetails(alertId) {
+            const alert = allAlerts.find(a => a.id == alertId);
+            if (!alert) return;
+            
+            const modal = document.getElementById('alert-modal');
+            const modalBody = document.getElementById('modal-body');
+            
+            // Fetch detailed vehicle info if track_id exists
+            let trackDetails = null;
+            if (alert.track_id) {
+                try {
+                    const response = await fetch(`/api/v1/anomalies/vehicle-tracks/${alert.track_id}`);
+                    if (response.ok) {
+                        trackDetails = await response.json();
+                    }
+                } catch (error) {
+                    console.error('Error fetching track details:', error);
+                }
+            }
+            
+            modalBody.innerHTML = `
+                <div class="vehicle-info">
+                    <span class="info-label">Alert Type:</span>
+                    <span class="info-value">${formatAlertType(alert.type)}</span>
+                    
+                    <span class="info-label">Severity:</span>
+                    <span class="info-value">
+                        <span class="alert-badge badge-${alert.severity}">${alert.severity.toUpperCase()}</span>
+                    </span>
+                    
+                    <span class="info-label">Time Detected:</span>
+                    <span class="info-value">${new Date(alert.detected_time).toLocaleString()}</span>
+                    
+                    <span class="info-label">License Plate:</span>
+                    <span class="info-value">${alert.plate_text || 'NO PLATE DETECTED'}</span>
+                    
+                    ${alert.vehicle_info ? `
+                        <span class="info-label">Vehicle:</span>
+                        <span class="info-value">${formatVehicleInfo(alert.vehicle_info)}</span>
+                    ` : ''}
+                    
+                    <span class="info-label">Track ID:</span>
+                    <span class="info-value">${alert.track_id}</span>
+                </div>
+                
+                ${alert.image ? `
+                    <div style="text-align: center;">
+                        <img src="data:image/jpeg;base64,${alert.image}" class="plate-image" alt="Detection Image">
+                    </div>
+                ` : ''}
+                
+                <div style="margin-top: 2rem;">
+                    <h3 style="margin-bottom: 1rem;">Alert Details</h3>
+                    <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.6;">${alert.message}</p>
+                </div>
+                
+                ${trackDetails ? `
+                    <div style="margin-top: 2rem;">
+                        <h3 style="margin-bottom: 1rem;">Vehicle Tracking Information</h3>
+                        <div class="vehicle-info">
+                            <span class="info-label">First Seen:</span>
+                            <span class="info-value">${new Date(trackDetails.tracking_info.first_seen).toLocaleString()}</span>
+                            
+                            <span class="info-label">Last Seen:</span>
+                            <span class="info-value">${new Date(trackDetails.tracking_info.last_seen).toLocaleString()}</span>
+                            
+                            <span class="info-label">Total Appearances:</span>
+                            <span class="info-value">${trackDetails.tracking_info.total_appearances}</span>
+                            
+                            <span class="info-label">Associated Plates:</span>
+                            <span class="info-value">${trackDetails.associated_plates.map(p => p.plate_text).join(', ') || 'None'}</span>
+                            
+                            <span class="info-label">Total Anomalies:</span>
+                            <span class="info-value">${trackDetails.tracking_info.anomaly_count}</span>
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+            
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('alert-modal').style.display = 'none';
+        }
+
+        function applyFilters() {
+            currentFilters = {
+                type: document.getElementById('alert-type').value,
+                severity: document.getElementById('severity').value,
+                timeRange: document.getElementById('time-range').value,
+                plate: document.getElementById('plate-filter').value
+            };
+            
+            let filtered = allAlerts;
+            
+            if (currentFilters.type) {
+                filtered = filtered.filter(a => a.type === currentFilters.type);
+            }
+            
+            if (currentFilters.severity) {
+                filtered = filtered.filter(a => a.severity === currentFilters.severity);
+            }
+            
+            if (currentFilters.plate) {
+                filtered = filtered.filter(a => 
+                    a.plate_text && a.plate_text.includes(currentFilters.plate.toUpperCase())
+                );
+            }
+            
+            displayAlerts(filtered);
+        }
+
+        function clearFilters() {
+            document.getElementById('alert-type').value = '';
+            document.getElementById('severity').value = '';
+            document.getElementById('time-range').value = '24h';
+            document.getElementById('plate-filter').value = '';
+            
+            currentFilters = {
+                type: '',
+                severity: '',
+                timeRange: '24h',
+                plate: ''
+            };
+            
+            displayAlerts(allAlerts);
+        }
+
+        function filterBySeverity(severity) {
+            document.getElementById('severity').value = severity;
+            applyFilters();
+        }
+
+        function setView(viewType) {
+            const toggleBtns = document.querySelectorAll('.toggle-btn');
+            toggleBtns.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // TODO: Implement grid view
+            if (viewType === 'grid') {
+                console.log('Grid view not yet implemented');
+            }
+        }
+
+        async function viewVehicleHistory(event, identifier) {
+            event.stopPropagation();
+            // Redirect to search page with the plate/track ID
+            if (identifier && identifier !== 'NO PLATE') {
+                window.location.href = `/ui/search.html?plate=${identifier}`;
+            }
+        }
+
+        async function dismissAlert(event, alertId) {
+            event.stopPropagation();
+            // TODO: Implement alert dismissal API
+            console.log('Dismiss alert:', alertId);
+            
+            // Remove from UI
+            const alertElement = event.target.closest('.alert-item');
+            alertElement.style.opacity = '0';
+            setTimeout(() => alertElement.remove(), 300);
+        }
+
+        function handleNewAlert(alertData) {
+            // Add new alert to the beginning of the list
+            allAlerts.unshift(alertData);
+            
+            // Show notification
+            showNotification(`New ${alertData.severity} alert: ${alertData.type}`, alertData.severity);
+            
+            // Refresh display
+            displayAlerts(allAlerts);
+        }
+
+        function showNotification(message, severity = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${severity === 'critical' ? '#f5576c' : '#4facfe'};
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 10px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                z-index: 2000;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
+        }
+
+        function showError(message) {
+            const container = document.getElementById('alerts-list');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">❌</div>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="loadAlerts()" style="margin-top: 1rem;">
+                        Retry
+                    </button>
+                </div>
+            `;
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadAlerts, 30000);
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAlerts();
+            connectWebSocket();
+        });
+
+        // Close modal when clicking outside
+        window.onclick = (event) => {
+            const modal = document.getElementById('alert-modal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        };
+    </script>
+</body>
+</html>

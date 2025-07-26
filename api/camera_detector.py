@@ -3,6 +3,7 @@ import logging
 import platform
 import subprocess
 import re
+import os
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
 import psutil
@@ -27,6 +28,10 @@ class CameraDetector:
         self.detected_cameras: List[CameraInfo] = []
         self.platform = platform.system().lower()
         
+    def reset_cache(self):
+        """Reset the camera cache - useful after configuration changes."""
+        self.detected_cameras = []
+        
     def detect_all_cameras(self) -> List[CameraInfo]:
         """Detect all available cameras using multiple methods."""
         self.detected_cameras = []
@@ -49,9 +54,11 @@ class CameraDetector:
             macos_cameras = self._detect_macos_cameras()
             self._merge_camera_info(macos_cameras)
         
-        # Method 3: Network camera detection (common IP ranges)
-        network_cameras = self._detect_network_cameras()
-        self.detected_cameras.extend(network_cameras)
+        # Method 3: Network camera detection (common IP ranges) - disabled by default for USB cameras
+        # Enable this in production if you have RTSP cameras
+        if os.getenv("ENABLE_NETWORK_CAMERA_DETECTION", "false").lower() == "true":
+            network_cameras = self._detect_network_cameras()
+            self.detected_cameras.extend(network_cameras)
             
         # Test camera functionality
         self._test_cameras()

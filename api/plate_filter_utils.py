@@ -8,6 +8,51 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def _is_state_related_text(clean_text: str) -> bool:
+    """
+    Check if the text is likely state-related content that shouldn't be a plate.
+    """
+    # All US state codes
+    state_codes = {
+        'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+        'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+        'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+        'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+        'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+    }
+    
+    # Check if it's exactly a state code (2 characters)
+    if len(clean_text) == 2 and clean_text in state_codes:
+        return True
+    
+    # Check for common state nickname patterns
+    state_patterns = [
+        r'^GARDEN$',  # Garden (State)
+        r'^EMPIRE$',  # Empire (State) 
+        r'^GOLDEN$',  # Golden (State)
+        r'^SUNSHINE$',  # Sunshine (State)
+        r'^LONE$',    # Lone (Star)
+        r'^FIRST$',   # First (State)
+        r'^ALOHA$',   # Aloha (State)
+        r'^GRANITE$', # Granite (State)
+        r'^SILVER$',  # Silver (State)
+        r'^OCEAN$',   # Ocean (State)
+        r'^PINE$',    # Pine (Tree State)
+        r'^TREE$',    # (Pine) Tree (State)
+        r'^LIVE$',    # Live (Free or Die)
+        r'^FREE$',    # (Live) Free (or Die)
+        r'^SHOW$',    # Show (Me State)
+        r'^BEAUTIFUL$', # Beautiful (for various states)
+        r'^WILD$',    # Wild (Wonderful West Virginia)
+        r'^WONDERFUL$' # (Wild) Wonderful (West Virginia)
+    ]
+    
+    for pattern in state_patterns:
+        if re.match(pattern, clean_text):
+            return True
+    
+    return False
+
 def is_likely_plate_text(text: str) -> bool:
     """
     Check if text looks like a license plate number.
@@ -42,12 +87,27 @@ def is_likely_plate_text(text: str) -> bool:
         'OPENROAD', 'WEBSITE', 'DEALER', 'SALES', 'SERVICE', 'AUTO',
         'CALIFORNIA', 'TEXAS', 'FLORIDA', 'YORK', 'MONTH', 'YEAR',
         'GOV', 'DMV', 'DEPT', 'MOTOR', 'VEHICLES', 'USA', 'AMERICA',
-        'REGISTRATION', 'EXPIRES', 'VALID', 'THRU', 'COUNTY'
+        'REGISTRATION', 'EXPIRES', 'VALID', 'THRU', 'COUNTY',
+        # Add more comprehensive state-related terms
+        'GOLDEN', 'EMPIRE', 'SUNSHINE', 'CONSTITUTION', 'FIRST',
+        'ALOHA', 'LINCOLN', 'HOOSIER', 'HAWKEYE', 'PELICAN',
+        'DOMINION', 'VOLUNTEER', 'GRANITE', 'SILVER', 'BUCKEYE',
+        'KEYSTONE', 'OCEAN', 'PALMETTO', 'RUSHMORE', 'MOUNTAIN',
+        'EVERGREEN', 'LONE', 'STAR', 'LAND', 'OLD', 'GREEN',
+        'MOUNT', 'PINE', 'TREE', 'LIVE', 'FREE', 'DIE', 'Show',
+        'SHOW', 'BEAUTIFUL', 'FRIENDLY', 'GREAT', 'WILD', 'WONDERFUL',
+        # State name parts that could be misidentified
+        'NORTH', 'SOUTH', 'WEST', 'EAST', 'ISLAND', 'CAROLINA',
+        'DAKOTA', 'VIRGINIA', 'MEXICO', 'HAMPSHIRE', 'COLUMBIA'
     ]
     
     for word in skip_words:
         if word in clean:
             return False
+    
+    # Additional state-related filtering
+    if _is_state_related_text(clean):
+        return False
     
     # California specific pattern: #XXX### (digit + 3 letters + 3 digits)
     if re.match(r'^\d[A-Z]{3}\d{3}$', clean):
@@ -110,8 +170,17 @@ def extract_plate_number(ocr_results: List) -> Tuple[str, float]:
     # Look for California pattern in parts (like "6XSU" + "832")
     for i in range(len(all_texts)):
         for j in range(i + 1, min(i + 3, len(all_texts))):  # Look ahead up to 2 texts
-            combined = all_texts[i][0].replace(' ', '') + all_texts[j][0].replace(' ', '')
+            text1 = all_texts[i][0].replace(' ', '')
+            text2 = all_texts[j][0].replace(' ', '')
+            combined = text1 + text2
             combined_conf = (all_texts[i][1] + all_texts[j][1]) / 2
+            
+            # Don't combine if either part looks like state-related text
+            if (_is_state_related_text(text1.upper()) or 
+                _is_state_related_text(text2.upper()) or
+                any(skip in text1.upper() for skip in ['GARDEN', 'STATE', 'GOLDEN', 'EMPIRE']) or
+                any(skip in text2.upper() for skip in ['GARDEN', 'STATE', 'GOLDEN', 'EMPIRE'])):
+                continue
             
             if is_likely_plate_text(combined):
                 # Format with space in typical position
@@ -128,7 +197,9 @@ def extract_plate_number(ocr_results: List) -> Tuple[str, float]:
     if not plate_candidates:
         for text, conf in all_texts:
             cleaned = re.sub(r'[^A-Z0-9]', '', text)
-            if 5 <= len(cleaned) <= 8 and not any(skip in cleaned for skip in ['GOV', 'DMV', 'CALIFORNIA']):
+            if (5 <= len(cleaned) <= 8 and 
+                not any(skip in cleaned for skip in ['GOV', 'DMV', 'CALIFORNIA']) and
+                not _is_state_related_text(cleaned)):
                 # Check if it has the right character mix
                 has_letter = any(c.isalpha() for c in cleaned)
                 has_number = any(c.isdigit() for c in cleaned)

@@ -1,0 +1,56 @@
+# ALPR Surveillance System - Production Requirements
+
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+gunicorn==21.2.0
+
+# Computer Vision & AI
+opencv-python==4.8.1.78
+opencv-contrib-python==4.8.1.78
+ultralytics==8.0.206
+easyocr==1.7.0
+Pillow==10.1.0
+numpy==1.24.4
+scipy==1.11.4
+
+# Database
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.12.1
+
+# HTTP & WebSockets
+requests==2.31.0
+websockets==12.0
+python-multipart==0.0.6
+httpx==0.25.2
+
+# Configuration & Environment
+python-dotenv==1.0.0
+pydantic==2.5.0
+pydantic-settings==2.0.3
+
+# Utilities
+python-dateutil==2.8.2
+pathlib2==2.3.7.post1
+typing-extensions==4.8.0
+
+# Production Monitoring
+prometheus-client==0.19.0
+structlog==23.2.0
+
+# Security
+cryptography==41.0.7
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+
+# Optional: GPU Support (uncomment if using NVIDIA GPU)
+# torch==2.1.1+cu118 -f https://download.pytorch.org/whl/torch_stable.html
+# torchvision==0.16.1+cu118 -f https://download.pytorch.org/whl/torch_stable.html
+
+# Development (remove in production)
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1

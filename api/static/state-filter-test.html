@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>State Filter Test - ALPR System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: #888;
+            font-size: 1.1rem;
+        }
+
+        .test-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .test-section h2 {
+            margin-bottom: 1rem;
+            color: #4CAF50;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .result {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .result.filtered {
+            border-left-color: #f44336;
+            background: rgba(244, 67, 54, 0.1);
+        }
+
+        .result-header {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .result-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .detail-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+
+        .detail-label {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-value {
+            font-weight: 500;
+        }
+
+        .stats-section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .examples {
+            margin-top: 1rem;
+        }
+
+        .example-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .example-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .example-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .loading {
+            display: none;
+            color: #667eea;
+            font-style: italic;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/ui/navigation.html" class="btn back-btn">← Back to Navigation</a>
+        
+        <div class="header">
+            <h1>🛡️ State Filter Test</h1>
+            <p>Test the automatic filtering of state names and invalid plate text</p>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Text Filtering</h2>
+            <div class="input-group">
+                <label for="testText">Enter text to test:</label>
+                <input type="text" id="testText" placeholder="e.g., CALIFORNIA, ABC123, TX, etc.">
+            </div>
+            <div class="input-group">
+                <label for="confidence">Confidence (0.0 - 1.0):</label>
+                <input type="number" id="confidence" min="0" max="1" step="0.1" value="0.8">
+            </div>
+            <button class="btn" onclick="testFilter()">Test Filter</button>
+            <div class="loading" id="loading">Testing...</div>
+
+            <div class="examples">
+                <h3>Quick Examples:</h3>
+                <div class="example-buttons">
+                    <button class="example-btn" onclick="setTestText('CALIFORNIA')">CALIFORNIA</button>
+                    <button class="example-btn" onclick="setTestText('TX')">TX</button>
+                    <button class="example-btn" onclick="setTestText('ABC123')">ABC123</button>
+                    <button class="example-btn" onclick="setTestText('STATE')">STATE</button>
+                    <button class="example-btn" onclick="setTestText('LICENSE')">LICENSE</button>
+                    <button class="example-btn" onclick="setTestText('XYZ789')">XYZ789</button>
+                    <button class="example-btn" onclick="setTestText('FLORIDA PLATE')">FLORIDA PLATE</button>
+                    <button class="example-btn" onclick="setTestText('123ABC')">123ABC</button>
+                </div>
+            </div>
+
+            <div id="testResult"></div>
+        </div>
+
+        <div class="stats-section">
+            <h2>Filter Statistics</h2>
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalWords">-</div>
+                    <div class="stat-label">Total Filtered Words</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="stateCount">-</div>
+                    <div class="stat-label">US States & Territories</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="commonWords">-</div>
+                    <div class="stat-label">Common Plate Words</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load filter statistics on page load
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/v1/state-filter/stats');
+                const stats = await response.json();
+                
+                document.getElementById('totalWords').textContent = stats.total_filtered_words || 0;
+                document.getElementById('stateCount').textContent = stats.us_states_count || 0;
+                document.getElementById('commonWords').textContent = stats.common_words_count || 0;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Test filter function
+        async function testFilter() {
+            const text = document.getElementById('testText').value.trim();
+            const confidence = parseFloat(document.getElementById('confidence').value);
+            const resultDiv = document.getElementById('testResult');
+            const loading = document.getElementById('loading');
+
+            if (!text) {
+                alert('Please enter some text to test');
+                return;
+            }
+
+            loading.style.display = 'block';
+            resultDiv.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/v1/state-filter/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        confidence: confidence
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    displayResult(result);
+                } else {
+                    resultDiv.innerHTML = `<div class="result filtered">
+                        <div class="result-header">❌ Error</div>
+                        <p>${result.error || 'Unknown error occurred'}</p>
+                    </div>`;
+                }
+            } catch (error) {
+                console.error('Error testing filter:', error);
+                resultDiv.innerHTML = `<div class="result filtered">
+                    <div class="result-header">❌ Error</div>
+                    <p>Failed to test filter: ${error.message}</p>
+                </div>`;
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Display test result
+        function displayResult(result) {
+            const resultDiv = document.getElementById('testResult');
+            const isFiltered = result.should_filter;
+            
+            const resultClass = isFiltered ? 'result filtered' : 'result';
+            const icon = isFiltered ? '🚫' : '✅';
+            const status = isFiltered ? 'FILTERED OUT' : 'ALLOWED';
+            
+            resultDiv.innerHTML = `
+                <div class="${resultClass}">
+                    <div class="result-header">${icon} ${status}</div>
+                    <div class="result-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Original Text</div>
+                            <div class="detail-value">'${result.original_text}'</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Cleaned Text</div>
+                            <div class="detail-value">'${result.cleaned_text || 'null'}'</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Is State Name</div>
+                            <div class="detail-value">${result.is_state_name ? 'Yes' : 'No'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Contains State Info</div>
+                            <div class="detail-value">${result.contains_state_info ? 'Yes' : 'No'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Valid Plate Format</div>
+                            <div class="detail-value">${result.is_valid_format ? 'Yes' : 'No'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Overall Valid</div>
+                            <div class="detail-value">${result.is_valid_plate ? 'Yes' : 'No'}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Set test text from example buttons
+        function setTestText(text) {
+            document.getElementById('testText').value = text;
+        }
+
+        // Handle Enter key in text input
+        document.getElementById('testText').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                testFilter();
+            }
+        });
+
+        // Load stats on page load
+        window.onload = loadStats;
+    </script>
+</body>
+</html>
